@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Paneli | OptiLine Pro</title>
+  <link rel="stylesheet" href="assets/portal.css">
+  <script src="assets/portal.js" defer></script>
+</head>
+<body data-page="admin" class="dark-page">
+  <header class="site-header dark">
+    <a class="brand" href="index.html">
+      <img src="assets/logo.png" alt="OptiLine Pro">
+      <span>OptiLine Pro</span>
+    </a>
+    <nav>
+      <a href="index.html">Merkez</a>
+      <a href="license.html">Lisans İste</a>
+      <a href="download.html">İndir / Güncelle</a>
+      <a class="active" href="admin.html">Admin</a>
+    </nav>
+  </header>
+
+  <main class="admin-shell">
+    <section class="admin-top">
+      <div>
+        <span class="eyebrow">Yönetim Paneli</span>
+        <h1>Lisanslar ve GitHub yayın dosyaları</h1>
+      </div>
+      <div class="admin-stats">
+        <span><b id="licenseCount">0</b> lisans</span>
+        <span><b id="activeCount">0</b> aktif</span>
+        <span><b id="releaseVersion">1.1.1</b> sürüm</span>
+      </div>
+    </section>
+
+    <section class="license-console">
+      <div class="license-list-panel">
+        <div class="toolbar">
+          <input id="licenseSearch" type="search" placeholder="Etikete göre ara...">
+          <button class="chip active" data-filter="Aktif" type="button">Aktif</button>
+          <button class="chip amber" data-filter="Askıda" type="button">Askıda</button>
+          <button class="chip red" data-filter="İptal" type="button">İptal</button>
+          <button class="chip" data-filter="all" type="button">Tümü</button>
+        </div>
+
+        <div class="license-count-text"><span id="licenseListInfo">0 lisans listeleniyor</span></div>
+        <div id="licenseCards" class="license-cards"></div>
+      </div>
+
+      <aside class="create-panel">
+        <div class="panel-title">
+          <span>Yeni Lisans</span>
+          <h2>Lisans Oluştur</h2>
+        </div>
+
+        <div class="panel-illustration" aria-hidden="true">
+          <div class="mock-window">
+            <span></span><span></span><span></span>
+            <i></i>
+          </div>
+          <div class="mock-grid">
+            <div></div><div></div><div></div>
+            <div></div><div></div><div></div>
+          </div>
+        </div>
+
+        <form id="licenseForm" class="stack-form">
+          <label>Etiket
+            <input id="licLabel" required placeholder="Örn: Mehmet Çelik / OPTILINE PRO">
+          </label>
+          <label>Makine Kodu
+            <input id="licMachine" required placeholder="MCH-XXXX-XXXX">
+          </label>
+          <label>Maksimum cihaz
+            <input id="licDevices" type="number" min="1" value="1">
+          </label>
+          <div class="date-row">
+            <label>Bitiş Tarihi
+              <input id="licExpiry" type="date">
+            </label>
+            <label class="check-pill">
+              <input id="licUnlimited" type="checkbox">
+              <span>Sınırsız Süre</span>
+            </label>
+          </div>
+
+          <div class="module-box">
+            <strong>Modül Yetkileri</strong>
+            <label><input name="module" value="Proje" type="checkbox"> Proje</label>
+            <label><input name="module" value="Profil" type="checkbox" checked> Profil</label>
+            <label><input name="module" value="Stok Danışmanı" type="checkbox" checked> Stok Danışmanı</label>
+            <label><input name="module" value="Levha" type="checkbox"> Levha</label>
+          </div>
+
+          <div class="limit-grid">
+            <label>Proje Limiti<input id="limitProject" type="number" min="0" value="2"></label>
+            <label>Profil Limiti<input id="limitProfile" type="number" min="0" value="50"></label>
+            <label>Danışman Limiti<input id="limitAdvisor" type="number" min="0" value="200"></label>
+            <label>Levha Limiti<input id="limitSheet" type="number" min="0" value="50"></label>
+          </div>
+
+          <label>Not
+            <textarea id="licNote" placeholder="Müşteri, paket veya özel not..."></textarea>
+          </label>
+
+          <button class="btn light full" type="submit">Lisans Oluştur</button>
+        </form>
+      </aside>
+    </section>
+
+    <section class="publish-grid">
+      <article class="publish-card">
+        <div class="table-head">
+          <div>
+            <span class="eyebrow">GitHub Güncelleme</span>
+            <h2>Sürüm Yayın Dosyası</h2>
+          </div>
+          <button class="btn ghost small" id="downloadVersionJson" type="button">version.json indir</button>
+        </div>
+
+        <form id="releaseForm" class="release-form">
+          <label>Sürüm
+            <input id="relVersion" placeholder="1.1.2" value="1.1.2">
+          </label>
+          <label>Setup URL
+            <input id="relSetup" placeholder="https://github.com/.../OptiLineSetup.exe">
+          </label>
+          <label>Update ZIP URL
+            <input id="relUpdate" placeholder="https://github.com/.../OptiLineUpdate.zip">
+          </label>
+          <label>SHA256
+            <input id="relSha" placeholder="İsteğe bağlı dosya doğrulama kodu">
+          </label>
+          <label>Sürüm Notu
+            <textarea id="relNotes" placeholder="Bu sürümde yapılan değişiklikler..."></textarea>
+          </label>
+          <button class="btn primary" type="submit">Sürümü Kaydet</button>
+        </form>
+      </article>
+
+      <article class="publish-card">
+        <div class="table-head">
+          <div>
+            <span class="eyebrow">Dışa Aktarım</span>
+            <h2>Lisans Dosyası</h2>
+          </div>
+          <button class="btn ghost small" id="downloadLicensesJson" type="button">licenses.json indir</button>
+        </div>
+        <pre id="jsonPreview" class="json-preview"></pre>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

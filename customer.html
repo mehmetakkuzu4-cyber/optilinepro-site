@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Müşteri Paneli | OptiLine Pro</title>
+  <link rel="stylesheet" href="assets/styles.css">
+  <script src="assets/app.js" defer></script>
+</head>
+<body data-page="customer">
+  <div class="app-layout">
+    <aside class="side-nav">
+      <a class="brand" href="index.html"><img src="assets/logo.png" alt="OptiLine Pro"><span>OptiLine Pro</span></a>
+      <a class="active" href="customer.html">Lisans Durumu</a>
+      <a href="download.html">Setup Merkezi</a>
+      <a href="license.html">Lisans Akışı</a>
+      <a href="index.html">Siteye Dön</a>
+      <button class="btn full" data-logout type="button" style="margin-top:18px">Çıkış</button>
+    </aside>
+    <main class="workspace">
+      <section class="workspace-head">
+        <div>
+          <h1>Müşteri Paneli</h1>
+          <p><strong data-user-name></strong> · <span data-user-company></span></p>
+        </div>
+        <span class="pill amber">Lisans isteği bekleyebilir</span>
+      </section>
+
+      <section class="stat-row">
+        <div class="stat"><span>Aktif modül</span><b>2</b></div>
+        <div class="stat"><span>Cihaz hakkı</span><b>1</b></div>
+        <div class="stat"><span>Son sürüm</span><b>1.1.1</b></div>
+        <div class="stat"><span>Durum</span><b>Demo</b></div>
+      </section>
+
+      <section class="grid-2">
+        <div class="card">
+          <h2>Lisans İsteği Gönder</h2>
+          <p class="hint">Programdan aldığınız makine kodunu girin. Admin paneline istek olarak düşer.</p>
+          <form class="form" id="requestForm" style="margin-top:16px">
+            <div class="field">
+              <label for="machineCode">Makine kodu</label>
+              <input id="machineCode" placeholder="Örn: MCH-8A92-44F0" required>
+            </div>
+            <div class="field">
+              <label>İstenen modüller</label>
+              <div class="checkbox-stack">
+                <label><span>Proje Optimizasyonu</span><input name="modules" value="Proje" type="checkbox"></label>
+                <label><span>Profil Optimizasyonu</span><input name="modules" value="Profil" type="checkbox" checked></label>
+                <label><span>Stok Danışmanı</span><input name="modules" value="Stok Danismani" type="checkbox" checked></label>
+                <label><span>Levha Optimizasyonu</span><input name="modules" value="Levha" type="checkbox"></label>
+              </div>
+            </div>
+            <button class="btn primary" type="submit">Lisans İsteği Gönder</button>
+          </form>
+        </div>
+        <div class="card">
+          <h2>Aktif Paket</h2>
+          <div class="feature-list">
+            <div class="feature-item"><i class="checkmark"></i><div><strong>Profil Optimizasyonu</strong><span>50 parça demo limiti.</span></div></div>
+            <div class="feature-item"><i class="checkmark"></i><div><strong>Stok Danışmanı</strong><span>200 parça demo limiti.</span></div></div>
+            <div class="feature-item"><i class="checkmark"></i><div><strong>Launcher</strong><span>Güncel sürümü kontrol edecek yapı.</span></div></div>
+          </div>
+          <div class="notice blue" style="margin-top:16px">Gerçek yayında bu panel lisans API'sinden canlı durumu okuyacak.</div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

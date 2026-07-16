@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>İndir / Güncelle | OptiLine Pro</title>
+  <link rel="stylesheet" href="assets/portal.css">
+  <script src="assets/portal.js" defer></script>
+</head>
+<body data-page="download">
+  <header class="site-header">
+    <a class="brand" href="index.html">
+      <img src="assets/logo.png" alt="OptiLine Pro">
+      <span>OptiLine Pro</span>
+    </a>
+    <nav>
+      <a href="index.html">Merkez</a>
+      <a href="license.html">Lisans İste</a>
+      <a class="active" href="download.html">İndir / Güncelle</a>
+      <a href="admin.html">Admin</a>
+    </nav>
+  </header>
+
+  <main class="shell">
+    <section class="download-hero">
+      <div>
+        <span class="eyebrow">GitHub Yayın Merkezi</span>
+        <h1>Setup ve güncelleme dosyaları GitHub'dan alınacak.</h1>
+        <p>Bu sayfa `version.json` bilgisini okuyacak şekilde hazırlandı. GitHub Pages'e koyulduğunda müşteriye güncel setup linki buradan verilir.</p>
+      </div>
+      <div class="version-box">
+        <span>Güncel Sürüm</span>
+        <strong id="publicVersion">1.1.1</strong>
+        <small id="publicDate">Hazırlanıyor</small>
+      </div>
+    </section>
+
+    <section class="download-grid">
+      <article class="download-card">
+        <h2>OptiLine Pro Kurulum</h2>
+        <p>Yeni kurulum yapan müşteri bu dosyayı indirir. Dosya GitHub Releases tarafında tutulacak.</p>
+        <a class="btn primary full" id="setupLink" href="#" target="_blank" rel="noreferrer">Setup Dosyasını İndir</a>
+      </article>
+
+      <article class="download-card">
+        <h2>Güncelleme Paketi</h2>
+        <p>Launcher ileride bu paketi okuyacak. Şu an program tarafına dokunmadan yayın alanını hazırlıyoruz.</p>
+        <a class="btn ghost full" id="updateLink" href="#" target="_blank" rel="noreferrer">Update Paketini Aç</a>
+      </article>
+
+      <article class="download-card">
+        <h2>Yayın Bilgisi</h2>
+        <dl class="release-details">
+          <dt>SHA256</dt><dd id="publicSha">-</dd>
+          <dt>Zorunlu</dt><dd id="publicRequired">Hayır</dd>
+          <dt>Not</dt><dd id="publicNotes">Sürüm bilgisi admin panelinden hazırlanır.</dd>
+        </dl>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

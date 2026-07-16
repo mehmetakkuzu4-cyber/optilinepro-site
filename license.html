@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lisans İste | OptiLine Pro</title>
+  <link rel="stylesheet" href="assets/portal.css">
+  <script src="assets/portal.js" defer></script>
+</head>
+<body data-page="request">
+  <header class="site-header">
+    <a class="brand" href="index.html">
+      <img src="assets/logo.png" alt="OptiLine Pro">
+      <span>OptiLine Pro</span>
+    </a>
+    <nav>
+      <a href="index.html">Merkez</a>
+      <a class="active" href="license.html">Lisans İste</a>
+      <a href="download.html">İndir / Güncelle</a>
+      <a href="admin.html">Admin</a>
+    </nav>
+  </header>
+
+  <main class="shell narrow">
+    <section class="page-intro">
+      <span class="eyebrow">Müşteri Lisans İsteği</span>
+      <h1>Makine kodunu gönder, lisans hazırlanacak.</h1>
+      <p>Bu sayfa GitHub Pages üzerinde çalışabilecek şekilde hazırlandı. Form, lisans isteğini düzenli metne çevirir; müşteri bu metni kopyalayıp sana gönderebilir.</p>
+    </section>
+
+    <section class="request-grid">
+      <form id="requestForm" class="request-card">
+        <label>Firma / Müşteri
+          <input id="reqName" required placeholder="Örn: Mehmet Çelik / OptiLine Pro">
+        </label>
+        <label>E-posta / Telefon
+          <input id="reqContact" placeholder="E-posta veya telefon">
+        </label>
+        <label>Makine Kodu
+          <input id="reqMachine" required placeholder="Programdaki makine kodu">
+        </label>
+        <div class="module-box light-box">
+          <strong>İstenen Modüller</strong>
+          <label><input name="reqModule" value="Proje" type="checkbox"> Proje</label>
+          <label><input name="reqModule" value="Profil" type="checkbox" checked> Profil</label>
+          <label><input name="reqModule" value="Stok Danışmanı" type="checkbox" checked> Stok Danışmanı</label>
+          <label><input name="reqModule" value="Levha" type="checkbox"> Levha</label>
+        </div>
+        <label>Not
+          <textarea id="reqNote" placeholder="Kullanılacak paket, demo isteği, firma notu..."></textarea>
+        </label>
+        <button class="btn primary full" type="submit">Lisans İstek Metni Oluştur</button>
+      </form>
+
+      <aside class="request-card muted-card">
+        <h2>Hazırlanan İstek</h2>
+        <p>Bu metin müşteri tarafından sana gönderilecek. Admin panelinde aynı bilgilerle lisans oluşturulacak.</p>
+        <textarea id="requestOutput" readonly placeholder="Formu doldurunca istek metni burada görünecek."></textarea>
+        <div class="row-actions">
+          <button class="btn ghost" id="copyRequest" type="button">Kopyala</button>
+          <a class="btn ghost" id="mailRequest" href="#">E-posta Taslağı</a>
+        </div>
+      </aside>
+    </section>
+  </main>
+</body>
+</html>

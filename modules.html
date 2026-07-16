@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Modüller | OptiLine Pro</title>
+  <link rel="stylesheet" href="assets/styles.css">
+  <script src="assets/app.js" defer></script>
+</head>
+<body data-page="modules" class="premium-page">
+  <header class="topbar premium-topbar">
+    <nav class="nav premium-nav">
+      <a class="brand premium-brand" href="index.html"><img src="assets/logo.png" alt="OptiLine Pro"><span>OptiLine Pro</span></a>
+      <div class="links premium-links">
+        <a data-nav="home" href="index.html">Ana Sayfa</a>
+        <a data-nav="product" href="product.html">Ürün</a>
+        <a data-nav="modules" href="modules.html">Modüller</a>
+        <a data-nav="license" href="license.html">Lisans</a>
+        <a data-nav="download" href="download.html">İndir</a>
+      </div>
+      <div class="nav-actions">
+        <a class="btn ghost-dark" data-panel-link href="login.html">Panel</a>
+        <a class="btn outline-light" data-login-link href="login.html">Giriş</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="page-title">
+      <div class="section">
+        <div class="eyebrow">Yetkilendirilebilir modüller</div>
+        <h1>Her müşteriye ihtiyacı kadar OptiLine.</h1>
+        <p class="lead">Lisans sistemi modül bazlı çalışacak: bir kullanıcıya sadece Profil ve Stok Danışmanı açılabilir, başka bir kullanıcıya Levha da eklenebilir.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="grid-4">
+        <article class="card module-card">
+          <div><div class="icon">P</div><h3>Proje Optimizasyonu</h3><p>Panel kodları, Excel hazırlığı, üretim akışı ve çok aşamalı proje raporları.</p></div>
+          <span class="pill">Örnek limit: 2 panel</span>
+        </article>
+        <article class="card module-card">
+          <div><div class="icon">F</div><h3>Profil Optimizasyonu</h3><p>Tek profil kesim planı, stok kullanımı, fire takibi, PDF ve yazdırma ekranları.</p></div>
+          <span class="pill">Örnek limit: 50 parça</span>
+        </article>
+        <article class="card module-card">
+          <div><div class="icon">S</div><h3>Stok Danışmanı</h3><p>Farklı stok boylarını ve maliyet senaryolarını karşılaştırıp en mantıklı kararı önerir.</p></div>
+          <span class="pill">Örnek limit: 200 parça</span>
+        </article>
+        <article class="card module-card">
+          <div><div class="icon">L</div><h3>Levha Optimizasyonu</h3><p>2D levha yerleşimi, döndürme kuralları, adet, kod, fire ve çıktı mantığı.</p></div>
+          <span class="pill">Örnek limit: 50 parça</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="section compact split">
+      <div>
+        <h2>Lisans sadece aç/kapat değildir.</h2>
+        <p class="lead">Doğru modelde lisans; modül, cihaz, bitiş tarihi ve kullanım sınırını birlikte taşır. Böylece demo, deneme, sınırlı paket ve tam paket aynı altyapıyla yönetilir.</p>
+        <div class="mini-tags">
+          <span>Modül izni</span><span>Parça limiti</span><span>Cihaz limiti</span><span>Bitiş tarihi</span><span>Müşteri adı</span>
+        </div>
+      </div>
+      <div class="code-box">license = {
+  customer: "Panel Imalat",
+  machine: "MCH-8A92-44F0",
+  modules: ["profil", "advisor"],
+  limits: { profil: 50, advisor: 200 },
+  expires_at: "2027-07-16"
+}</div>
+    </section>
+  </main>
+
+  <footer class="footer"><div class="footer-inner"><strong>OptiLine Pro</strong><span>Modül bazlı lisanslama modeli.</span></div></footer>
+</body>
+</html>

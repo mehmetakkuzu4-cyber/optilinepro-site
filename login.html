@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Giriş | OptiLine Pro</title>
+  <link rel="stylesheet" href="assets/styles.css">
+  <script src="assets/app.js" defer></script>
+</head>
+<body data-page="login" class="premium-page">
+  <header class="topbar premium-topbar">
+    <nav class="nav premium-nav">
+      <a class="brand premium-brand" href="index.html"><img src="assets/logo.png" alt="OptiLine Pro"><span>OptiLine Pro</span></a>
+      <div class="links premium-links">
+        <a data-nav="home" href="index.html">Ana Sayfa</a>
+        <a data-nav="product" href="product.html">Ürün</a>
+        <a data-nav="modules" href="modules.html">Modüller</a>
+        <a data-nav="license" href="license.html">Lisans</a>
+        <a data-nav="download" href="download.html">İndir</a>
+      </div>
+      <div class="nav-actions">
+        <a class="btn outline-light" href="login.html">Giriş</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="auth-shell">
+    <aside class="auth-side">
+      <div class="eyebrow">OptiLine hesabı</div>
+      <h1>Tek giriş, iki ayrı deneyim.</h1>
+      <p>Admin lisansları, müşterileri ve sürümleri yönetir. Müşteri ise kurulum, makine kodu, lisans isteği ve aktif paket bilgilerini görür.</p>
+      <div class="mini-tags">
+        <span>Admin paneli</span>
+        <span>Müşteri paneli</span>
+        <span>Lisans istekleri</span>
+        <span>Sürüm merkezi</span>
+      </div>
+    </aside>
+    <section class="auth-panel">
+      <h2>Giriş Yap</h2>
+      <p class="hint">Bu prototipte iki örnek hesap var. Gerçek sistemde bu alan sunucu oturumuna bağlanacak.</p>
+      <form class="form" id="loginForm">
+        <div class="field">
+          <label for="email">E-posta</label>
+          <input id="email" type="email" autocomplete="username" placeholder="ornek@optilinepro.com" required>
+        </div>
+        <div class="field">
+          <label for="password">Şifre</label>
+          <input id="password" type="password" autocomplete="current-password" placeholder="Şifre" required>
+        </div>
+        <button class="btn primary full" type="submit">Panele Gir</button>
+      </form>
+      <div class="demo-box">
+        <strong>Demo hesaplar</strong><br>
+        Admin: admin@optilinepro.com / admin123<br>
+        Müşteri: musteri@optilinepro.com / demo123
+      </div>
+      <div class="login-actions" style="margin-top:14px">
+        <button class="btn" data-demo-login="admin" type="button">Admin Bilgilerini Doldur</button>
+        <button class="btn" data-demo-login="customer" type="button">Müşteri Bilgilerini Doldur</button>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

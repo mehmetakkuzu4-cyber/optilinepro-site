@@ -1,0 +1,9 @@
+{
+  "version": "1.1.1",
+  "date": "2026-07-16",
+  "setup_url": "https://github.com/USERNAME/OptiLinePro-Releases/releases/latest/download/OptiLineSetup.exe",
+  "update_url": "https://github.com/USERNAME/OptiLinePro-Releases/releases/latest/download/OptiLineUpdate.zip",
+  "sha256": "",
+  "required": false,
+  "notes": "OptiLine Pro GitHub dağıtım kaydı. Setup ve update linkleri GitHub repository oluşturulduktan sonra güncellenecek."
+}
