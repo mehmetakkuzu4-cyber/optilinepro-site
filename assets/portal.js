@@ -30,7 +30,7 @@ const seedLicenses = [
     max_devices: 1,
     expires_at: null,
     modules: ["Profil", "Stok Danışmanı"],
-    limits: { project: 2, profile: 50, advisor: 200, sheet: 50 },
+    access: "unlimited",
     note: "Örnek lisans kaydı."
   }
 ];
@@ -213,7 +213,7 @@ function renderJsonPreview() {
       max_devices: row.max_devices,
       expires_at: row.expires_at,
       modules: row.modules.map(name => moduleMap[name] || name),
-      limits: row.limits,
+      access: row.access || "unlimited",
       note: row.note
     }))
   };
@@ -258,12 +258,7 @@ function initAdmin() {
       max_devices: Number(qs("#licDevices").value || 1),
       expires_at: qs("#licUnlimited").checked ? null : (qs("#licExpiry").value || null),
       modules,
-      limits: {
-        project: Number(qs("#limitProject").value || 0),
-        profile: Number(qs("#limitProfile").value || 0),
-        advisor: Number(qs("#limitAdvisor").value || 0),
-        sheet: Number(qs("#limitSheet").value || 0)
-      },
+      access: "unlimited",
       note: qs("#licNote").value.trim()
     };
     const rows = getLicenses();
@@ -271,10 +266,6 @@ function initAdmin() {
     setLicenses(rows);
     event.target.reset();
     qs("#licDevices").value = "1";
-    qs("#limitProject").value = "2";
-    qs("#limitProfile").value = "50";
-    qs("#limitAdvisor").value = "200";
-    qs("#limitSheet").value = "50";
     renderAdminStats();
     renderLicenseCards();
     renderJsonPreview();

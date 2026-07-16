@@ -78,7 +78,7 @@ function homeView() {
   <div class="grid-3" style="margin-top:16px">
     <article class="card feature-card"><h3>Akıllı optimizasyon</h3><p class="muted">Kesim kombinasyonlarını arar, stok ve fire dengesine göre en güçlü planı öne çıkarır.</p></article>
     <article class="card feature-card"><h3>Detaylı raporlama</h3><p class="muted">Kesim planlarını, kullanılan stokları ve sonuç özetini okunaklı PDF ve Excel çıktısına dönüştürür.</p></article>
-    <article class="card feature-card"><h3>Kontrollü lisans</h3><p class="muted">Modül, cihaz, süre ve kullanım limitlerini tek lisans yapısında yönetir.</p></article>
+    <article class="card feature-card"><h3>Kontrollü lisans</h3><p class="muted">Modül yetkilerini, cihaz sayısını ve lisans süresini tek lisans yapısında yönetir.</p></article>
   </div>`;
 }
 
@@ -100,8 +100,8 @@ function productView() {
 }
 
 function pricingView() {
-  return `${sectionHead("Lisans paketleri", "İhtiyaç duyduğunuz modüller ve kullanım limitleri lisansa özel tanımlanır.")}
-    <div class="grid-3"><article class="card"><h3>Başlangıç</h3><p class="muted">Seçili tek modül ve sınırlı kullanım.</p><button class="button ghost" data-mode-target="customer" type="button">Lisans iste</button></article><article class="card" style="border-color:var(--accent)"><span class="badge">Önerilen</span><h3 style="margin-top:12px">Profesyonel</h3><p class="muted">Birden fazla modül, cihaz ve ihtiyaca özel limitler.</p><button class="button primary" data-mode-target="customer" type="button">Lisans iste</button></article><article class="card"><h3>Kurumsal</h3><p class="muted">Proje, kullanıcı ve cihaz ihtiyacına göre özel yapı.</p><button class="button ghost" data-go="support" type="button">İletişime geç</button></article></div>`;
+  return `${sectionHead("Lisans paketleri", "İhtiyaç duyduğunuz modüller lisansa özel tanımlanır ve seçilen modüller sınırsız açılır.")}
+    <div class="grid-3"><article class="card"><h3>Başlangıç</h3><p class="muted">Seçili tek modülde tam ve sınırsız kullanım.</p><button class="button ghost" data-mode-target="customer" type="button">Lisans iste</button></article><article class="card" style="border-color:var(--accent)"><span class="badge">Önerilen</span><h3 style="margin-top:12px">Profesyonel</h3><p class="muted">Birden fazla modül için tam erişim, cihaz ve süre seçimi.</p><button class="button primary" data-mode-target="customer" type="button">Lisans iste</button></article><article class="card"><h3>Kurumsal</h3><p class="muted">Proje, kullanıcı ve cihaz ihtiyacına göre özel yapı.</p><button class="button ghost" data-go="support" type="button">İletişime geç</button></article></div>`;
 }
 
 function updatesView() {
@@ -206,15 +206,15 @@ function licenseResultsMarkup() {
 
 function licenseCreateForm() {
   return `<aside class="license-create-panel">
-    <div class="license-create-heading"><small>YENİ LİSANS</small><h2>Lisans Oluştur</h2><p>Modül, cihaz ve kullanım limitlerini tek kayıtta tanımlayın.</p></div>
+    <div class="license-create-heading"><small>YENİ LİSANS</small><h2>Lisans Oluştur</h2><p>Modül yetkilerini, cihaz sayısını ve lisans süresini tek kayıtta tanımlayın.</p></div>
     <div class="license-preview" aria-hidden="true"><div class="preview-top"><i></i><i></i><i></i><span></span></div><div class="preview-grid"><div class="preview-side"><b></b><b></b><b></b></div><div class="preview-main"><span></span><span></span><span></span><em></em><em></em><em></em></div></div></div>
     <form id="uiLicenseForm" class="license-create-form">
       <label>Etiket<input id="uiLicLabel" required placeholder="Örn: Optimization Pro v1"></label>
       <label>Makine kodu<input id="uiLicMachine" placeholder="İsteğe bağlı"></label>
       <label>Maksimum cihaz<input id="uiLicDevices" type="number" min="1" value="1"></label>
       <div class="license-expiry-row"><label>Bitiş tarihi<input id="uiLicExpiry" type="date"></label><label class="inline-check"><input id="uiLicUnlimited" type="checkbox">Sınırsız süre</label></div>
-      <fieldset class="license-modules"><legend>Modül yetkileri</legend><label><input name="uiModule" type="checkbox" value="Proje">Proje</label><label><input name="uiModule" type="checkbox" value="Profil">Profil</label><label><input name="uiModule" type="checkbox" value="Stok Danışmanı">Stok Danışmanı</label><label><input name="uiModule" type="checkbox" value="Levha">Levha</label></fieldset>
-      <div class="license-limit-grid"><label>Proje limiti<input id="uiLimitProject" type="number" min="0" value="2"></label><label>Profil limiti<input id="uiLimitProfile" type="number" min="0" value="50"></label><label>Danışman limiti<input id="uiLimitAdvisor" type="number" min="0" value="200"></label><label>Levha limiti<input id="uiLimitSheet" type="number" min="0" value="50"></label></div>
+      <fieldset class="license-modules"><legend>Tam erişim verilecek modüller</legend><label><input name="uiModule" type="checkbox" value="Proje">Proje</label><label><input name="uiModule" type="checkbox" value="Profil">Profil</label><label><input name="uiModule" type="checkbox" value="Stok Danışmanı">Stok Danışmanı</label><label><input name="uiModule" type="checkbox" value="Levha">Levha</label></fieldset>
+      <div class="license-rule-note"><strong>Seçilen modüller sınırsız açılır.</strong><span>2 proje, 50 profil, 200 danışman ve 50 levha sınırı yalnızca lisans girilmemiş deneme kullanımında uygulanır.</span></div>
       <label>Not<textarea id="uiLicNote" placeholder="Müşteri, paket veya satış notu"></textarea></label>
       <button class="button primary license-create-button" type="submit">Lisans Oluştur</button>
     </form>
@@ -424,7 +424,7 @@ uiScreen.addEventListener("submit", event => {
       key: generateKey(), label: document.querySelector("#uiLicLabel").value.trim(), machine: document.querySelector("#uiLicMachine").value.trim(),
       status: "Aktif", created_at: new Date().toLocaleString("tr-TR"), last_check: "-", version: getRelease().version,
       max_devices: Number(document.querySelector("#uiLicDevices").value || 1), expires_at: document.querySelector("#uiLicUnlimited").checked ? null : (document.querySelector("#uiLicExpiry").value || null), modules,
-      limits: { project: Number(document.querySelector("#uiLimitProject").value || 0), profile: Number(document.querySelector("#uiLimitProfile").value || 0), advisor: Number(document.querySelector("#uiLimitAdvisor").value || 0), sheet: Number(document.querySelector("#uiLimitSheet").value || 0) },
+      access: "unlimited",
       note: document.querySelector("#uiLicNote").value.trim()
     };
     const rows = getLicenses(); rows.unshift(license); setLicenses(rows);

@@ -282,7 +282,7 @@ td { color: #e6eefb; font-size: 14px; }
 .preview-main span { width: 100%; }
 .preview-main em { grid-column: 1 / -1; width: 76%; height: 5px; }
 .license-create-form { display: grid; gap: 12px; }
-.license-create-form > label, .license-expiry-row label, .license-limit-grid label { font-size: 11px; }
+.license-create-form > label, .license-expiry-row label { font-size: 11px; }
 .license-create-form input, .license-create-form textarea { min-height: 40px; background: #050a12; }
 .license-create-form textarea { min-height: 78px; }
 .license-expiry-row { display: grid; grid-template-columns: 1fr auto; gap: 9px; align-items: end; }
@@ -291,7 +291,8 @@ td { color: #e6eefb; font-size: 14px; }
 .license-modules { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin: 0; padding: 10px; border: 1px solid var(--line); border-radius: 7px; }
 .license-modules legend { padding: 0 6px; color: var(--muted); font-size: 11px; }
 .license-modules label { display: flex; align-items: center; gap: 7px; padding: 7px; border-radius: 5px; background: #0d1727; }
-.license-limit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.license-rule-note { display: grid; gap: 5px; padding: 11px 12px; border: 1px solid #245c4a; border-radius: 7px; color: #a9b9ce; background: #102921; font-size: 11px; line-height: 1.45; }
+.license-rule-note strong { color: #9af0cf; }
 .license-create-button { width: 100%; margin-top: 2px; }
 .empty { display: grid; place-items: center; min-height: 260px; color: var(--muted); text-align: center; }
 .toast { position: fixed; right: 22px; bottom: 22px; z-index: 50; max-width: 360px; padding: 13px 16px; border: 1px solid #355076; border-radius: 8px; color: var(--text); background: #13233a; box-shadow: var(--shadow); opacity: 0; transform: translateY(10px); pointer-events: none; transition: .2s ease; }
@@ -336,6 +337,6 @@ td { color: #e6eefb; font-size: 14px; }
   .section-head { align-items: flex-start; flex-direction: column; }
   .product-frame img { height: 190px; }
   .license-list-panel, .license-create-panel { padding: 12px; }
-  .license-card-actions, .license-limit-grid, .license-modules { grid-template-columns: 1fr; }
+  .license-card-actions, .license-modules { grid-template-columns: 1fr; }
   .license-expiry-row { grid-template-columns: 1fr; }
 }
