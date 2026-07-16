@@ -11,8 +11,8 @@ const moduleMap = {
 const defaultRelease = {
   version: "1.1.1",
   date: "2026-07-16",
-  setup_url: "https://github.com/USERNAME/OptiLinePro-Releases/releases/latest/download/OptiLineSetup.exe",
-  update_url: "https://github.com/USERNAME/OptiLinePro-Releases/releases/latest/download/OptiLineUpdate.zip",
+  setup_url: "",
+  update_url: "",
   sha256: "",
   required: false,
   notes: "OptiLine Pro ilk GitHub dağıtım kaydı."

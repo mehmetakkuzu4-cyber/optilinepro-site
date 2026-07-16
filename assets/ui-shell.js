@@ -11,16 +11,17 @@ const uiPages = {
   ],
   admin: [
     ["admin-dashboard", "Yönetim Özeti"], ["licenses", "Lisans Yönetimi"],
-    ["create-license", "Lisans Oluştur"], ["customers", "Müşteriler"],
-    ["versions", "Sürüm Yönetimi"], ["publish-update", "Güncelleme Yayınla"],
-    ["products", "Ürün Yönetimi"], ["support-admin", "Destek Merkezi"],
-    ["logs", "İşlem Kayıtları"], ["settings", "Sistem Ayarları"]
+    ["customers", "Müşteriler"],
+    ["versions", "Sürüm Yönetimi"], ["publish-update", "Güncelleme Yayınla"]
   ]
 };
 
 let uiMode = "public";
 let uiCurrent = "home";
 let publicRelease = defaultRelease;
+let uiLicenseFilter = "all";
+let uiLicenseSearch = "";
+let uiLicenseLayout = "cards";
 
 const uiNav = document.querySelector("#sideNav");
 const uiScreen = document.querySelector("#screen");
@@ -111,8 +112,18 @@ function updatesView() {
 
 function downloadsView(customer = false) {
   const release = publicRelease;
+  const setupAction = releaseUrlReady(release.setup_url)
+    ? `<a class="button primary" href="${safeText(release.setup_url)}" target="_blank" rel="noreferrer">Setup dosyasını indir</a>`
+    : `<button class="button primary" type="button" disabled>Setup henüz yayınlanmadı</button>`;
+  const updateAction = releaseUrlReady(release.update_url)
+    ? `<a class="button ghost" href="${safeText(release.update_url)}" target="_blank" rel="noreferrer">Paketi aç</a>`
+    : `<button class="button ghost" type="button" disabled>Güncelleme henüz yayınlanmadı</button>`;
   return `${sectionHead(customer ? "Dosyalarım" : "İndirme merkezi", "Windows kurulum dosyası ve yayınlanan güncelleme paketi.")}
-    <div class="grid-2"><article class="card"><span class="badge good">Güncel</span><h3 style="margin-top:14px">OptiLine Pro Setup</h3><p class="muted">Sürüm ${safeText(release.version || "1.1.1")} · Windows 10 / 11</p><a class="button primary" href="${safeText(release.setup_url || "#")}" target="_blank" rel="noreferrer">Setup dosyasını indir</a></article><article class="card"><span class="badge">Update</span><h3 style="margin-top:14px">Güncelleme paketi</h3><p class="muted">Mevcut kurulumlar için yayınlanan paket.</p><a class="button ghost" href="${safeText(release.update_url || "#")}" target="_blank" rel="noreferrer">Paketi aç</a></article></div>`;
+    <div class="grid-2"><article class="card"><span class="badge ${releaseUrlReady(release.setup_url) ? "good" : "warn"}">${releaseUrlReady(release.setup_url) ? "Güncel" : "Bekliyor"}</span><h3 style="margin-top:14px">OptiLine Pro Setup</h3><p class="muted">Sürüm ${safeText(release.version || "1.1.1")} · Windows 10 / 11</p>${setupAction}</article><article class="card"><span class="badge">Update</span><h3 style="margin-top:14px">Güncelleme paketi</h3><p class="muted">Mevcut kurulumlar için yayınlanan paket.</p>${updateAction}</article></div>`;
+}
+
+function releaseUrlReady(value) {
+  return /^https:\/\//i.test(value || "") && !String(value).includes("USERNAME");
 }
 
 function supportView() {
@@ -133,9 +144,93 @@ function customerDashboardView() {
 
 function licensesView(admin = false) {
   const rows = getLicenses();
-  const action = admin ? `<button class="button primary" data-go="create-license" type="button">Lisans oluştur</button>` : "";
-  return `${sectionHead(admin ? "Lisans yönetimi" : "Lisanslarım", admin ? "Tüm lisansları görüntüleyin ve durumlarını yönetin." : "Hesabınıza bağlı lisansları görüntüleyin.", action)}
-    <div class="table-wrap"><table><thead><tr><th>Lisans</th><th>Müşteri</th><th>Modüller</th><th>Bitiş</th><th>Durum</th>${admin ? "<th>İşlem</th>" : ""}</tr></thead><tbody>${rows.map(row => `<tr><td>${safeText(row.key)}</td><td>${safeText(row.label)}</td><td>${safeText(row.modules.join(", "))}</td><td>${safeText(row.expires_at || "Sınırsız")}</td><td><span class="badge ${row.status === "Aktif" ? "good" : row.status === "Askıda" ? "warn" : "danger"}">${safeText(row.status)}</span></td>${admin ? `<td><div class="table-actions"><button class="button success" data-license-status="Aktif" data-key="${safeText(row.key)}" type="button">Aktif</button><button class="button danger" data-license-status="Askıda" data-key="${safeText(row.key)}" type="button">Askı</button></div></td>` : ""}</tr>`).join("")}</tbody></table></div>`;
+  if (admin) return licenseManagementView();
+  return `${sectionHead("Lisanslarım", "Hesabınıza bağlı lisansları görüntüleyin.")}
+    <div class="table-wrap"><table><thead><tr><th>Lisans</th><th>Müşteri</th><th>Modüller</th><th>Bitiş</th><th>Durum</th></tr></thead><tbody>${rows.map(row => `<tr><td>${safeText(row.key)}</td><td>${safeText(row.label)}</td><td>${safeText((row.modules || []).join(", "))}</td><td>${safeText(row.expires_at || "Sınırsız")}</td><td><span class="badge ${licenseBadgeClass(row.status)}">${safeText(row.status)}</span></td></tr>`).join("")}</tbody></table></div>`;
+}
+
+function licenseBadgeClass(status) {
+  if (status === "Aktif") return "good";
+  if (status === "Askıda") return "warn";
+  return "danger";
+}
+
+function filteredLicenses() {
+  const query = uiLicenseSearch.trim().toLocaleLowerCase("tr-TR");
+  return getLicenses().filter(row => {
+    const filterMatches = uiLicenseFilter === "all" || row.status === uiLicenseFilter;
+    const searchable = `${row.key || ""} ${row.label || ""} ${row.machine || ""} ${(row.modules || []).join(" ")}`.toLocaleLowerCase("tr-TR");
+    return filterMatches && searchable.includes(query);
+  });
+}
+
+function licenseDeviceRows(row) {
+  const devices = Array.isArray(row.devices) && row.devices.length
+    ? row.devices
+    : row.machine
+      ? [{ machine: row.machine, activated_at: row.created_at, last_check: row.last_check, version: row.version, status: row.status }]
+      : [];
+  if (!devices.length) return `<div class="license-device-empty">Henüz etkinleştirilmiş cihaz yok.</div>`;
+  return `<div class="license-device-table"><div class="license-device-head"><span>Makine ID</span><span>Aktivasyon tarihi</span><span>Son kontrol</span><span>Program sürümü</span><span>Durum</span></div>${devices.map(device => `<div class="license-device-row"><strong>${safeText(device.machine || "-")}</strong><span>${safeText(device.activated_at || "-")}</span><span>${safeText(device.last_check || "-")}</span><span>${safeText(device.version || "-")}</span><span><span class="badge ${licenseBadgeClass(device.status || row.status)}">${safeText(device.status || row.status)}</span></span></div>`).join("")}</div>`;
+}
+
+function licenseCardsMarkup(rows) {
+  if (!rows.length) return `<div class="license-empty"><strong>Bu filtrede lisans bulunamadı.</strong><span>Aramayı temizleyin veya başka bir durum seçin.</span></div>`;
+  return rows.map(row => `<article class="license-item">
+    <div class="license-item-main">
+      <div class="license-key-row"><code>${safeText(row.key)}</code><button class="icon-button" data-license-action="copy" data-key="${safeText(row.key)}" type="button" title="Anahtarı kopyala">Kopyala</button></div>
+      <div class="license-title-row"><div><h3>${safeText(row.label || "Etiketsiz lisans")}</h3><div class="license-meta"><span class="badge ${licenseBadgeClass(row.status)}">${safeText(row.status)}</span><span>Cihaz: ${safeText(row.max_devices || 1)}</span><span>Bitiş: ${safeText(row.expires_at || "Sınırsız")}</span><span>Son kontrol: ${safeText(row.last_check || "-")}</span></div></div></div>
+      <div class="license-module-line"><strong>Yetkiler</strong><span>${safeText((row.modules || []).join(" · ") || "Modül seçilmedi")}</span></div>
+      <div class="license-device-title"><strong>Cihazlar</strong><span>${row.machine ? "1 bağlı cihaz" : "Cihaz bekleniyor"}</span></div>
+      ${licenseDeviceRows(row)}
+    </div>
+    <div class="license-card-actions">
+      ${row.status === "Askıda" || row.status === "İptal" ? `<button class="license-action success" data-license-action="activate" data-key="${safeText(row.key)}" type="button">Aktif Yap</button>` : `<button class="license-action" data-license-action="pause" data-key="${safeText(row.key)}" type="button">Askıya Al</button>`}
+      <button class="license-action success" data-license-action="renew" data-key="${safeText(row.key)}" type="button">Anahtar Yenile</button>
+      <button class="license-action danger" data-license-action="cancel" data-key="${safeText(row.key)}" type="button">Lisansı İptal Et</button>
+      <button class="license-action danger" data-license-action="delete" data-key="${safeText(row.key)}" type="button">Kalıcı Sil</button>
+      <button class="license-action warning" data-license-action="reset-device" data-key="${safeText(row.key)}" type="button">Cihazları Sıfırla</button>
+    </div>
+  </article>`).join("");
+}
+
+function licenseTableMarkup(rows) {
+  if (!rows.length) return `<div class="license-empty"><strong>Bu filtrede lisans bulunamadı.</strong></div>`;
+  return `<div class="table-wrap license-summary-table"><table><thead><tr><th>Anahtar</th><th>Etiket</th><th>Cihaz</th><th>Bitiş</th><th>Durum</th><th>İşlem</th></tr></thead><tbody>${rows.map(row => `<tr><td><code>${safeText(row.key)}</code></td><td>${safeText(row.label)}</td><td>${safeText(row.machine || "-")}</td><td>${safeText(row.expires_at || "Sınırsız")}</td><td><span class="badge ${licenseBadgeClass(row.status)}">${safeText(row.status)}</span></td><td><button class="button ghost" data-license-action="copy" data-key="${safeText(row.key)}" type="button">Kopyala</button></td></tr>`).join("")}</tbody></table></div>`;
+}
+
+function licenseResultsMarkup() {
+  const rows = filteredLicenses();
+  return uiLicenseLayout === "table" ? licenseTableMarkup(rows) : licenseCardsMarkup(rows);
+}
+
+function licenseCreateForm() {
+  return `<aside class="license-create-panel">
+    <div class="license-create-heading"><small>YENİ LİSANS</small><h2>Lisans Oluştur</h2><p>Modül, cihaz ve kullanım limitlerini tek kayıtta tanımlayın.</p></div>
+    <div class="license-preview" aria-hidden="true"><div class="preview-top"><i></i><i></i><i></i><span></span></div><div class="preview-grid"><div class="preview-side"><b></b><b></b><b></b></div><div class="preview-main"><span></span><span></span><span></span><em></em><em></em><em></em></div></div></div>
+    <form id="uiLicenseForm" class="license-create-form">
+      <label>Etiket<input id="uiLicLabel" required placeholder="Örn: Optimization Pro v1"></label>
+      <label>Makine kodu<input id="uiLicMachine" placeholder="İsteğe bağlı"></label>
+      <label>Maksimum cihaz<input id="uiLicDevices" type="number" min="1" value="1"></label>
+      <div class="license-expiry-row"><label>Bitiş tarihi<input id="uiLicExpiry" type="date"></label><label class="inline-check"><input id="uiLicUnlimited" type="checkbox">Sınırsız süre</label></div>
+      <fieldset class="license-modules"><legend>Modül yetkileri</legend><label><input name="uiModule" type="checkbox" value="Proje">Proje</label><label><input name="uiModule" type="checkbox" value="Profil">Profil</label><label><input name="uiModule" type="checkbox" value="Stok Danışmanı">Stok Danışmanı</label><label><input name="uiModule" type="checkbox" value="Levha">Levha</label></fieldset>
+      <div class="license-limit-grid"><label>Proje limiti<input id="uiLimitProject" type="number" min="0" value="2"></label><label>Profil limiti<input id="uiLimitProfile" type="number" min="0" value="50"></label><label>Danışman limiti<input id="uiLimitAdvisor" type="number" min="0" value="200"></label><label>Levha limiti<input id="uiLimitSheet" type="number" min="0" value="50"></label></div>
+      <label>Not<textarea id="uiLicNote" placeholder="Müşteri, paket veya satış notu"></textarea></label>
+      <button class="button primary license-create-button" type="submit">Lisans Oluştur</button>
+    </form>
+  </aside>`;
+}
+
+function licenseManagementView() {
+  const rows = filteredLicenses();
+  return `<div class="license-workspace">
+    <section class="license-list-panel">
+      <div class="license-toolbar"><div class="license-search"><input id="uiLicenseSearch" value="${safeText(uiLicenseSearch)}" placeholder="Etikete, anahtara veya makine koduna göre ara"></div><div class="license-filter-group"><button class="filter-chip ${uiLicenseFilter === "all" ? "active" : ""}" data-license-filter="all" type="button">Tümü</button><button class="filter-chip ${uiLicenseFilter === "Aktif" ? "active good" : ""}" data-license-filter="Aktif" type="button">Aktif</button><button class="filter-chip ${uiLicenseFilter === "Askıda" ? "active warn" : ""}" data-license-filter="Askıda" type="button">Askıda</button><button class="filter-chip ${uiLicenseFilter === "İptal" ? "active danger" : ""}" data-license-filter="İptal" type="button">İptal</button></div><button class="layout-toggle" data-license-layout type="button">${uiLicenseLayout === "cards" ? "Tablo Görünümü" : "Kart Görünümü"}</button></div>
+      <div class="license-list-info"><strong id="uiLicenseCount">${rows.length} lisans listeleniyor</strong><span>Lisansları, bağlı cihazları ve durum işlemlerini buradan yönetin.</span></div>
+      <div id="uiLicenseResults" class="license-results">${licenseResultsMarkup()}</div>
+    </section>
+    ${licenseCreateForm()}
+  </div>`;
 }
 
 function devicesView() {
@@ -150,13 +245,10 @@ function profileView() {
 
 function adminDashboardView() {
   const rows = getLicenses();
-  return `${sectionHead("Yönetim paneli", "OptiLine sisteminin genel durumu.", `<button class="button primary" data-go="create-license" type="button">Yeni lisans oluştur</button>`)}
-    <div class="grid-2"><article class="card"><h3>Son lisans işlemleri</h3>${rows.slice(0, 3).map(row => `<p>${safeText(row.label)} <span class="badge ${row.status === "Aktif" ? "good" : "warn"}">${safeText(row.status)}</span></p>`).join("") || `<p class="muted">Henüz lisans yok.</p>`}</article><article class="card"><h3>Sistem durumu</h3><p>Lisans dosyası <span class="badge good">Hazır</span></p><p>Güncelleme kaydı <span class="badge good">Çalışıyor</span></p><p>GitHub Pages <span class="badge good">Yayında</span></p></article></div>`;
-}
-
-function createLicenseView() {
-  return `${sectionHead("Yeni lisans oluştur", "Modülleri, cihaz limitini, kullanım sınırlarını ve bitiş tarihini belirleyin.")}
-    <form class="form-panel form-grid" id="uiLicenseForm"><label>Etiket<input id="uiLicLabel" required placeholder="Firma / müşteri adı"></label><label>Makine kodu<input id="uiLicMachine" placeholder="İsteğe bağlı"></label><label>Maksimum cihaz<input id="uiLicDevices" type="number" min="1" value="1"></label><label>Bitiş tarihi<input id="uiLicExpiry" type="date"></label><div class="check-row"><label><input name="uiModule" type="checkbox" value="Proje">Proje</label><label><input name="uiModule" type="checkbox" value="Profil">Profil</label><label><input name="uiModule" type="checkbox" value="Stok Danışmanı">Stok Danışmanı</label><label><input name="uiModule" type="checkbox" value="Levha">Levha</label></div><label>Proje limiti<input id="uiLimitProject" type="number" value="2"></label><label>Profil limiti<input id="uiLimitProfile" type="number" value="50"></label><label>Danışman limiti<input id="uiLimitAdvisor" type="number" value="200"></label><label>Levha limiti<input id="uiLimitSheet" type="number" value="50"></label><label style="grid-column:1/-1">Not<textarea id="uiLicNote"></textarea></label><button class="button primary" type="submit">Lisans anahtarı üret</button></form>`;
+  const release = getRelease();
+  const releaseReady = releaseUrlReady(release.setup_url) && releaseUrlReady(release.update_url);
+  return `${sectionHead("Yönetim paneli", "OptiLine sisteminin genel durumu.", `<button class="button primary" data-go="licenses" type="button">Lisans merkezini aç</button>`)}
+    <div class="grid-2"><article class="card"><h3>Son lisans işlemleri</h3>${rows.slice(0, 3).map(row => `<p>${safeText(row.label)} <span class="badge ${licenseBadgeClass(row.status)}">${safeText(row.status)}</span></p>`).join("") || `<p class="muted">Henüz lisans yok.</p>`}</article><article class="card"><h3>Sistem durumu</h3><p>Lisans kayıtları <span class="badge warn">Tarayıcıda yerel</span></p><p>Güncelleme paketleri <span class="badge ${releaseReady ? "good" : "warn"}">${releaseReady ? "Bağlı" : "Bağlantı bekliyor"}</span></p><p>GitHub Pages <span class="badge good">Yayında</span></p></article></div>`;
 }
 
 function customersView() {
@@ -166,7 +258,8 @@ function customersView() {
 
 function versionsView() {
   const release = getRelease();
-  return `${sectionHead("Sürüm yönetimi", "Yayındaki kurulum ve güncelleme kaydı.", `<button class="button primary" data-go="publish-update" type="button">Yeni sürüm</button>`)}<article class="card"><div class="section-head"><div><h3>OptiLine Pro ${safeText(release.version)}</h3><p>${safeText(release.date || "Tarih yok")}</p></div><span class="badge good">Yayında</span></div><p class="muted">${safeText(release.notes || "Sürüm notu yok.")}</p></article>`;
+  const ready = releaseUrlReady(release.setup_url) && releaseUrlReady(release.update_url);
+  return `${sectionHead("Sürüm yönetimi", "Yayındaki kurulum ve güncelleme kaydı.", `<button class="button primary" data-go="publish-update" type="button">Yeni sürüm</button>`)}<article class="card"><div class="section-head"><div><h3>OptiLine Pro ${safeText(release.version)}</h3><p>${safeText(release.date || "Tarih yok")}</p></div><span class="badge ${ready ? "good" : "warn"}">${ready ? "Yayına hazır" : "Dosya bağlantısı eksik"}</span></div><p class="muted">${safeText(release.notes || "Sürüm notu yok.")}</p></article>`;
 }
 
 function publishUpdateView() {
@@ -197,14 +290,9 @@ function currentView() {
     profile: profileView,
     "admin-dashboard": adminDashboardView,
     licenses: () => licensesView(true),
-    "create-license": createLicenseView,
     customers: customersView,
     versions: versionsView,
     "publish-update": publishUpdateView,
-    products: () => genericView("Ürün yönetimi", "OptiLine Pro modüllerini ve paketlerini yönetin."),
-    "support-admin": () => genericView("Destek merkezi", "Müşteri destek taleplerini yönetin."),
-    logs: () => `<h2>İşlem kayıtları</h2><div class="notice">Yönetim merkezi açıldı · ${new Date().toLocaleString("tr-TR")}</div><div class="notice">Sürüm kaydı kontrol edildi · ${safeText(getRelease().version)}</div>`,
-    settings: () => `${sectionHead("Sistem ayarları", "Lisans ve güncelleme davranışlarını yönetin.")}<div class="form-panel form-grid"><label>Lisans doğrulama<select><option>Her açılışta</option><option>24 saatte bir</option></select></label><label>Yayın kanalı<select><option>Kararlı</option><option>Beta</option></select></label></div>`
   };
   return (views[uiCurrent] || (() => genericView("Sayfa hazırlanıyor", "Bu bölüm henüz hazırlanmadı.")))();
 }
@@ -247,19 +335,77 @@ uiScreen.addEventListener("click", event => {
     changeMode(modeTarget.dataset.modeTarget);
     return;
   }
-  const statusButton = event.target.closest("[data-license-status]");
-  if (statusButton) {
-    const rows = getLicenses();
-    const row = rows.find(item => item.key === statusButton.dataset.key);
-    if (row) {
-      row.status = statusButton.dataset.licenseStatus;
-      setLicenses(rows);
-      renderMetrics();
-      renderScreen();
-      showUiToast("Lisans durumu güncellendi.");
-    }
+  const filterButton = event.target.closest("[data-license-filter]");
+  if (filterButton) {
+    uiLicenseFilter = filterButton.dataset.licenseFilter;
+    renderScreen();
+    return;
+  }
+  const layoutButton = event.target.closest("[data-license-layout]");
+  if (layoutButton) {
+    uiLicenseLayout = uiLicenseLayout === "cards" ? "table" : "cards";
+    renderScreen();
+    return;
+  }
+  const actionButton = event.target.closest("[data-license-action]");
+  if (actionButton) {
+    handleUiLicenseAction(actionButton.dataset.licenseAction, actionButton.dataset.key);
   }
 });
+
+uiScreen.addEventListener("input", event => {
+  if (event.target.id !== "uiLicenseSearch") return;
+  uiLicenseSearch = event.target.value;
+  refreshUiLicenseResults();
+});
+
+uiScreen.addEventListener("change", event => {
+  if (event.target.id !== "uiLicUnlimited") return;
+  const expiry = document.querySelector("#uiLicExpiry");
+  expiry.disabled = event.target.checked;
+  if (event.target.checked) expiry.value = "";
+});
+
+function refreshUiLicenseResults() {
+  const target = document.querySelector("#uiLicenseResults");
+  const count = document.querySelector("#uiLicenseCount");
+  if (target) target.innerHTML = licenseResultsMarkup();
+  if (count) count.textContent = `${filteredLicenses().length} lisans listeleniyor`;
+}
+
+function handleUiLicenseAction(action, key) {
+  const rows = getLicenses();
+  const index = rows.findIndex(item => item.key === key);
+  if (index < 0) return;
+  const row = rows[index];
+  if (action === "copy") {
+    navigator.clipboard?.writeText(row.key);
+    showUiToast("Lisans anahtarı kopyalandı.");
+    return;
+  }
+  if (action === "delete") {
+    if (!window.confirm(`${row.label || "Bu lisans"} kalıcı olarak silinsin mi?`)) return;
+    rows.splice(index, 1);
+    showUiToast("Lisans kalıcı olarak silindi.");
+  }
+  if (action === "activate") row.status = "Aktif";
+  if (action === "pause") row.status = "Askıda";
+  if (action === "cancel") row.status = "İptal";
+  if (action === "renew") {
+    row.key = generateKey();
+    navigator.clipboard?.writeText(row.key);
+    showUiToast("Yeni lisans anahtarı üretildi ve kopyalandı.");
+  }
+  if (action === "reset-device") {
+    row.machine = "";
+    row.devices = [];
+    row.last_check = "-";
+    showUiToast("Lisansın bağlı cihazları sıfırlandı.");
+  }
+  setLicenses(rows);
+  renderMetrics();
+  refreshUiLicenseResults();
+}
 
 uiScreen.addEventListener("submit", event => {
   event.preventDefault();
@@ -277,13 +423,17 @@ uiScreen.addEventListener("submit", event => {
     const license = {
       key: generateKey(), label: document.querySelector("#uiLicLabel").value.trim(), machine: document.querySelector("#uiLicMachine").value.trim(),
       status: "Aktif", created_at: new Date().toLocaleString("tr-TR"), last_check: "-", version: getRelease().version,
-      max_devices: Number(document.querySelector("#uiLicDevices").value || 1), expires_at: document.querySelector("#uiLicExpiry").value || null, modules,
+      max_devices: Number(document.querySelector("#uiLicDevices").value || 1), expires_at: document.querySelector("#uiLicUnlimited").checked ? null : (document.querySelector("#uiLicExpiry").value || null), modules,
       limits: { project: Number(document.querySelector("#uiLimitProject").value || 0), profile: Number(document.querySelector("#uiLimitProfile").value || 0), advisor: Number(document.querySelector("#uiLimitAdvisor").value || 0), sheet: Number(document.querySelector("#uiLimitSheet").value || 0) },
       note: document.querySelector("#uiLicNote").value.trim()
     };
     const rows = getLicenses(); rows.unshift(license); setLicenses(rows);
     navigator.clipboard?.writeText(license.key);
-    uiCurrent = "licenses"; renderMetrics(); renderNav(); renderScreen(); showUiToast("Lisans oluşturuldu ve anahtar kopyalandı.");
+    event.target.reset();
+    document.querySelector("#uiLicExpiry").disabled = false;
+    renderMetrics();
+    refreshUiLicenseResults();
+    showUiToast("Lisans oluşturuldu ve anahtar kopyalandı.");
   }
   if (event.target.id === "uiReleaseForm") {
     const release = {
