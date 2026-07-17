@@ -41,12 +41,14 @@ function renderMetrics() {
     ? (getCustomerLicense() ? [getCustomerLicense()] : [])
     : getLicenses();
   const active = licenses.filter(item => item.status === "Aktif").length;
-  const customers = new Set(licenses.map(item => item.label)).size;
+  const customers = portalState.customers?.length || new Set(licenses.map(item => item.label)).size;
+  const customerDevices = portalState.customer?.devices?.length || 0;
+  const customerTickets = portalState.customer?.tickets?.length || 0;
   const expiring = licenses.filter(item => item.expires_at && new Date(item.expires_at) - new Date() < 31 * 86400000).length;
   const values = uiMode === "public"
     ? [["Optimizasyon modülü", "4"], ["Rapor formatı", "2"], ["Güncel sürüm", publicRelease.version || "1.1.1"], ["Windows", "10 / 11"]]
     : uiMode === "customer"
-      ? [["Aktif lisans", active], ["Kayıtlı cihaz", licenses.reduce((sum, row) => sum + Number(row.max_devices || 0), 0)], ["Güncel sürüm", publicRelease.version || "1.1.1"], ["Destek talebi", "0"]]
+      ? [["Aktif lisans", active], ["Kayıtlı cihaz", customerDevices], ["Güncel sürüm", publicRelease.version || "1.1.1"], ["Destek talebi", customerTickets]]
       : [["Aktif lisans", active], ["Müşteri", customers], ["Güncel sürüm", getRelease().version || "1.1.1"], ["Yaklaşan bitiş", expiring]];
   uiMetrics.innerHTML = values.map(([label, value]) => metric(label, value)).join("");
 }
