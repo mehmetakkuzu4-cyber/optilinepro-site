@@ -289,7 +289,7 @@ async function requireAdmin(request, env) {
 async function currentRelease(env) {
   const row = await env.DB.prepare("SELECT * FROM releases WHERE is_current = 1 ORDER BY updated_at DESC LIMIT 1").first();
   if (!row) return {
-    version: "1.1.1", date: "", setup_url: "", update_url: "", sha256: "",
+    version: "1.1.2", date: "", setup_url: "", update_url: "", sha256: "",
     required: false, notes: "", channel: "stable", size_bytes: 0
   };
   return {

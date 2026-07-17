@@ -1,13 +1,13 @@
 const API_BASE = "https://api.optilinepro.com";
 
 const defaultRelease = {
-  version: "1.1.1",
-  date: "2026-07-16",
+  version: "1.1.2",
+  date: "2026-07-17",
   setup_url: "",
   update_url: "",
   sha256: "",
   required: false,
-  notes: "OptiLine Pro ilk dağıtım kaydı."
+  notes: "Canlı lisans ve merkezi güncelleme sistemi."
 };
 
 const portalState = {

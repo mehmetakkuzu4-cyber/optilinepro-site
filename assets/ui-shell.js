@@ -31,7 +31,7 @@ const uiMetrics = document.querySelector("#metrics");
 const metric = (label, value) => `<article class="metric"><small>${safeText(label)}</small><strong>${safeText(value)}</strong></article>`;
 const sectionHead = (title, text, action = "") => `<div class="section-head"><div><h2>${title}</h2><p>${text}</p></div>${action}</div>`;
 const productVisual = () => `<div class="product-frame">
-  <div class="product-frame-head"><strong>OptiLine Pro Desktop</strong><span class="badge good">v${safeText(publicRelease.version || "1.1.1")}</span></div>
+  <div class="product-frame-head"><strong>OptiLine Pro Desktop</strong><span class="badge good">v${safeText(publicRelease.version || "1.1.2")}</span></div>
   <img src="assets/screen-profile.png" alt="OptiLine Pro hızlı optimizasyon ekranı">
   <div class="product-kpis"><div><span>Kesim planı</span><strong>100 adım</strong></div><div><span>Raporlama</span><strong>PDF + Excel</strong></div></div>
 </div>`;
@@ -46,10 +46,10 @@ function renderMetrics() {
   const customerTickets = portalState.customer?.tickets?.length || 0;
   const expiring = licenses.filter(item => item.expires_at && new Date(item.expires_at) - new Date() < 31 * 86400000).length;
   const values = uiMode === "public"
-    ? [["Optimizasyon modülü", "4"], ["Rapor formatı", "2"], ["Güncel sürüm", publicRelease.version || "1.1.1"], ["Windows", "10 / 11"]]
+    ? [["Optimizasyon modülü", "4"], ["Rapor formatı", "2"], ["Güncel sürüm", publicRelease.version || "1.1.2"], ["Windows", "10 / 11"]]
     : uiMode === "customer"
-      ? [["Aktif lisans", active], ["Kayıtlı cihaz", customerDevices], ["Güncel sürüm", publicRelease.version || "1.1.1"], ["Destek talebi", customerTickets]]
-      : [["Aktif lisans", active], ["Müşteri", customers], ["Güncel sürüm", getRelease().version || "1.1.1"], ["Yaklaşan bitiş", expiring]];
+      ? [["Aktif lisans", active], ["Kayıtlı cihaz", customerDevices], ["Güncel sürüm", publicRelease.version || "1.1.2"], ["Destek talebi", customerTickets]]
+      : [["Aktif lisans", active], ["Müşteri", customers], ["Güncel sürüm", getRelease().version || "1.1.2"], ["Yaklaşan bitiş", expiring]];
   uiMetrics.innerHTML = values.map(([label, value]) => metric(label, value)).join("");
 }
 
@@ -101,7 +101,7 @@ function featuresView() {
 }
 
 function productView() {
-  return `<div class="grid-2"><article class="card"><span class="badge">OptiLine Pro 1.1.1</span><h1 style="margin-top:16px">Kesim planlamasının merkezi.</h1><p class="lead">Dört uzman modül, ortak stok yapısı, ölçü girişleri ve üretim raporları aynı masaüstü deneyiminde birleşir.</p><div class="notice" style="margin-top:22px">Profil, levha, stok danışmanı ve proje optimizasyonu ayrı ayrı lisanslanabilir.</div></article>${productVisual()}</div>`;
+  return `<div class="grid-2"><article class="card"><span class="badge">OptiLine Pro 1.1.2</span><h1 style="margin-top:16px">Kesim planlamasının merkezi.</h1><p class="lead">Dört uzman modül, ortak stok yapısı, ölçü girişleri ve üretim raporları aynı masaüstü deneyiminde birleşir.</p><div class="notice" style="margin-top:22px">Profil, levha, stok danışmanı ve proje optimizasyonu ayrı ayrı lisanslanabilir.</div></article>${productVisual()}</div>`;
 }
 
 function pricingView() {
@@ -111,8 +111,8 @@ function pricingView() {
 
 function updatesView() {
   const release = publicRelease;
-  return `${sectionHead("Sürüm notları", "Yayınlanan güncellemeler ve kurulum bilgileri.", `<span class="badge good">Son sürüm ${safeText(release.version || "1.1.1")}</span>`)}
-    <article class="card"><div class="section-head"><div><h3>OptiLine Pro ${safeText(release.version || "1.1.1")}</h3><p>${safeText(release.date || "Yayın tarihi belirtilmedi")}</p></div><span class="badge good">Kararlı</span></div><p>${safeText(release.notes || "Sürüm notu hazırlanıyor.")}</p></article>`;
+  return `${sectionHead("Sürüm notları", "Yayınlanan güncellemeler ve kurulum bilgileri.", `<span class="badge good">Son sürüm ${safeText(release.version || "1.1.2")}</span>`)}
+    <article class="card"><div class="section-head"><div><h3>OptiLine Pro ${safeText(release.version || "1.1.2")}</h3><p>${safeText(release.date || "Yayın tarihi belirtilmedi")}</p></div><span class="badge good">Kararlı</span></div><p>${safeText(release.notes || "Sürüm notu hazırlanıyor.")}</p></article>`;
 }
 
 function downloadsView(customer = false) {
@@ -124,7 +124,7 @@ function downloadsView(customer = false) {
     ? `<a class="button ghost" href="${safeText(release.update_url)}" target="_blank" rel="noreferrer">Paketi aç</a>`
     : `<button class="button ghost" type="button" disabled>Güncelleme henüz yayınlanmadı</button>`;
   return `${sectionHead(customer ? "Dosyalarım" : "İndirme merkezi", "Windows kurulum dosyası ve yayınlanan güncelleme paketi.")}
-    <div class="grid-2"><article class="card"><span class="badge ${releaseUrlReady(release.setup_url) ? "good" : "warn"}">${releaseUrlReady(release.setup_url) ? "Güncel" : "Bekliyor"}</span><h3 style="margin-top:14px">OptiLine Pro Setup</h3><p class="muted">Sürüm ${safeText(release.version || "1.1.1")} · Windows 10 / 11</p>${setupAction}</article><article class="card"><span class="badge">Update</span><h3 style="margin-top:14px">Güncelleme paketi</h3><p class="muted">Mevcut kurulumlar için yayınlanan paket.</p>${updateAction}</article></div>`;
+    <div class="grid-2"><article class="card"><span class="badge ${releaseUrlReady(release.setup_url) ? "good" : "warn"}">${releaseUrlReady(release.setup_url) ? "Güncel" : "Bekliyor"}</span><h3 style="margin-top:14px">OptiLine Pro Setup</h3><p class="muted">Sürüm ${safeText(release.version || "1.1.2")} · Windows 10 / 11</p>${setupAction}</article><article class="card"><span class="badge">Update</span><h3 style="margin-top:14px">Güncelleme paketi</h3><p class="muted">Mevcut kurulumlar için yayınlanan paket.</p>${updateAction}</article></div>`;
 }
 
 function releaseUrlReady(value) {
@@ -155,7 +155,7 @@ function licenseRequestView() {
 function customerDashboardView() {
   const active = getCustomerLicense();
   return `${sectionHead("Müşteri paneli", "Lisans, cihaz ve indirme işlemlerinin merkezi.", `<button class="button ghost" data-customer-logout type="button">Çıkış yap</button>`)}
-    <div class="grid-2"><article class="card"><div class="section-head"><div><h3>${safeText(active?.label || "OptiLine Pro")}</h3><p>${safeText(active?.modules?.join(", ") || "Lisans bekleniyor")}</p></div><span class="badge ${active?.status === "Aktif" ? "good" : "warn"}">${safeText(active?.status || "Bekliyor")}</span></div><p class="muted">Bitiş: ${safeText(active?.expires_at || "Sınırsız")}</p><div class="bar"><span style="width:84%"></span></div></article><article class="card"><h3>Son sürüm</h3><h1>${safeText(publicRelease.version || "1.1.1")}</h1><button class="button ghost" data-go="customer-downloads" type="button">Güncellemeyi indir</button></article></div>`;
+    <div class="grid-2"><article class="card"><div class="section-head"><div><h3>${safeText(active?.label || "OptiLine Pro")}</h3><p>${safeText(active?.modules?.join(", ") || "Lisans bekleniyor")}</p></div><span class="badge ${active?.status === "Aktif" ? "good" : "warn"}">${safeText(active?.status || "Bekliyor")}</span></div><p class="muted">Bitiş: ${safeText(active?.expires_at || "Sınırsız")}</p><div class="bar"><span style="width:84%"></span></div></article><article class="card"><h3>Son sürüm</h3><h1>${safeText(publicRelease.version || "1.1.2")}</h1><button class="button ghost" data-go="customer-downloads" type="button">Güncellemeyi indir</button></article></div>`;
 }
 
 function licensesView(admin = false) {
@@ -313,7 +313,7 @@ function versionsView() {
 function publishUpdateView() {
   const release = getRelease();
   return `${sectionHead("Güncelleme yayınla", "Sürüm numarası, paket bağlantıları ve sürüm notunu hazırlayın.")}
-    <form class="form-panel form-grid" id="uiReleaseForm"><label>Sürüm numarası<input id="uiRelVersion" required value="${safeText(release.version || "1.1.1")}"></label><label>Yayın tarihi<input id="uiRelDate" type="date" value="${safeText(release.date || todayIso())}"></label><label style="grid-column:1/-1">Setup bağlantısı<input id="uiRelSetup" value="${safeText(release.setup_url || "")}"></label><label style="grid-column:1/-1">Update bağlantısı<input id="uiRelUpdate" value="${safeText(release.update_url || "")}"></label><label style="grid-column:1/-1">SHA-256<input id="uiRelSha" value="${safeText(release.sha256 || "")}"></label><label style="grid-column:1/-1">Sürüm notları<textarea id="uiRelNotes">${safeText(release.notes || "")}</textarea></label><button class="button primary" type="submit">Sürüm kaydını hazırla</button></form>`;
+    <form class="form-panel form-grid" id="uiReleaseForm"><label>Sürüm numarası<input id="uiRelVersion" required value="${safeText(release.version || "1.1.2")}"></label><label>Yayın tarihi<input id="uiRelDate" type="date" value="${safeText(release.date || todayIso())}"></label><label style="grid-column:1/-1">Setup bağlantısı<input id="uiRelSetup" value="${safeText(release.setup_url || "")}"></label><label style="grid-column:1/-1">Update bağlantısı<input id="uiRelUpdate" value="${safeText(release.update_url || "")}"></label><label style="grid-column:1/-1">SHA-256<input id="uiRelSha" value="${safeText(release.sha256 || "")}"></label><label style="grid-column:1/-1">Sürüm notları<textarea id="uiRelNotes">${safeText(release.notes || "")}</textarea></label><button class="button primary" type="submit">Sürüm kaydını hazırla</button></form>`;
 }
 
 function genericView(title, text) {
