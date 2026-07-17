@@ -26,7 +26,11 @@ export default {
         return createLicenseRequest(request, env, cors);
       }
 
-      if (url.pathname === "/v1/licenses/verify" && request.method === "POST") {
+      if ([
+        "/v1/licenses/verify",
+        "/v1/license/verify",
+        "/api/v1/license/verify"
+      ].includes(url.pathname) && request.method === "POST") {
         return verifyLicense(request, env, cors);
       }
 
@@ -437,46 +441,88 @@ async function listCustomers(env) {
 async function verifyLicense(request, env, cors) {
   const input = await bodyJson(request);
   const activation = await activateLicense(input, env);
-  if (!activation.ok) return json({ valid: false, error: activation.error }, activation.status || 403, cors);
+  if (!activation.ok) {
+    return json({
+      ok: false,
+      valid: false,
+      error: activation.error,
+      error_code: activation.errorCode || "license_invalid"
+    }, activation.status || 403, cors);
+  }
   const license = activation.license;
   const moduleRows = await env.DB.prepare("SELECT module FROM license_modules WHERE license_id = ? ORDER BY module").bind(license.id).all();
+  const modules = (moduleRows.results || []).map(row => row.module);
+  const release = await currentRelease(env);
   return json({
+    ok: true,
     valid: true,
     status: license.status,
     label: license.label,
     expires_at: license.expires_at,
     max_devices: license.max_devices,
     access: license.access_level,
-    modules: (moduleRows.results || []).map(row => row.module)
+    modules,
+    license: {
+      status: "active",
+      label: license.label,
+      customer_name: license.label,
+      company: license.label,
+      expires_at: license.expires_at || "",
+      max_devices: license.max_devices,
+      access: license.access_level,
+      modules,
+      limits: {}
+    },
+    update: release
   }, 200, cors);
 }
 
 async function activateLicense(input, env) {
-  const key = String(input.key || "").trim().toUpperCase();
+  const key = String(input.key || input.license_key || "").trim().toUpperCase();
   const machine = String(input.machine_code || "").trim();
-  if (!key || !machine) return { ok: false, status: 400, error: "Lisans ve makine kodu gerekli." };
+  const version = String(input.version || input.app_version || "").trim();
+  if (!key || !machine) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Lisans ve makine kodu gerekli.",
+      errorCode: "license_key_and_machine_code_required"
+    };
+  }
   const license = await env.DB.prepare("SELECT * FROM licenses WHERE license_key = ?").bind(key).first();
-  if (!license || license.status !== "Aktif") return { ok: false, status: 403, error: "Lisans aktif değil." };
-  if (license.expires_at && license.expires_at < now().slice(0, 10)) return { ok: false, status: 403, error: "Lisans süresi dolmuş." };
+  if (!license) {
+    return { ok: false, status: 404, error: "Lisans bulunamadı.", errorCode: "license_not_found" };
+  }
+  if (license.status !== "Aktif") {
+    return { ok: false, status: 403, error: "Lisans aktif değil.", errorCode: "license_not_active" };
+  }
+  if (license.expires_at && license.expires_at < now().slice(0, 10)) {
+    return { ok: false, status: 403, error: "Lisans süresi dolmuş.", errorCode: "license_expired" };
+  }
 
   const existing = await env.DB.prepare("SELECT id FROM devices WHERE license_id = ? AND machine_code = ?")
     .bind(license.id, machine).first();
   const timestamp = now();
   if (existing) {
     await env.DB.prepare("UPDATE devices SET last_check = ?, program_version = ?, status = 'Aktif' WHERE id = ?")
-      .bind(timestamp, input.version || null, existing.id).run();
+      .bind(timestamp, version || null, existing.id).run();
   } else {
     const count = await env.DB.prepare("SELECT COUNT(*) AS count FROM devices WHERE license_id = ?").bind(license.id).first();
     if (Number(count?.count || 0) >= Number(license.max_devices || 1)) {
-      return { ok: false, status: 403, error: "Lisansın cihaz sınırı dolu." };
+      return {
+        ok: false,
+        status: 403,
+        error: "Lisansın cihaz sınırı dolu.",
+        errorCode: "device_limit_reached"
+      };
     }
     await env.DB.prepare(`INSERT INTO devices (
       id, license_id, machine_code, activated_at, last_check, program_version, status
     ) VALUES (?, ?, ?, ?, ?, ?, 'Aktif')`)
-      .bind(id("dev"), license.id, machine, timestamp, timestamp, input.version || null).run();
+      .bind(id("dev"), license.id, machine, timestamp, timestamp, version || null).run();
   }
   await env.DB.prepare("UPDATE licenses SET machine_code = ?, last_check = ?, program_version = ?, updated_at = ? WHERE id = ?")
-    .bind(machine, timestamp, input.version || null, timestamp, license.id).run();
+    .bind(machine, timestamp, version || null, timestamp, license.id).run();
   return { ok: true, license };
 }
 
