@@ -1,12 +1,4 @@
-const STORE_LICENSES = "optiline_portal_licenses";
-const STORE_RELEASE = "optiline_portal_release";
-
-const moduleMap = {
-  "Proje": "project",
-  "Profil": "profile",
-  "Stok Danışmanı": "advisor",
-  "Levha": "sheet"
-};
+const API_BASE = "https://api.optilinepro.com";
 
 const defaultRelease = {
   version: "1.1.1",
@@ -15,27 +7,19 @@ const defaultRelease = {
   update_url: "",
   sha256: "",
   required: false,
-  notes: "OptiLine Pro ilk GitHub dağıtım kaydı."
+  notes: "OptiLine Pro ilk dağıtım kaydı."
 };
 
-const seedLicenses = [
-  {
-    key: "FSL-AVAF-Q74M-SPAA-BB5M",
-    label: "Mehmet ÇELİK / OPTILINE PRO",
-    machine: "A1E8B364F932B50D",
-    status: "Aktif",
-    created_at: "2026-06-25 18:42",
-    last_check: "2026-07-08 09:34",
-    version: "1.0.0",
-    max_devices: 1,
-    expires_at: null,
-    modules: ["Profil", "Stok Danışmanı"],
-    access: "unlimited",
-    note: "Örnek lisans kaydı."
-  }
-];
-
-let activeFilter = "Aktif";
+const portalState = {
+  licenses: [],
+  customers: [],
+  requests: [],
+  release: { ...defaultRelease },
+  adminAuthenticated: false,
+  adminEmail: "",
+  customerAuthenticated: false,
+  customerLicense: null
+};
 
 function qs(selector, root = document) {
   return root.querySelector(selector);
@@ -53,17 +37,156 @@ function safeText(value) {
     .replaceAll('"', "&quot;");
 }
 
-function loadJson(key, fallback) {
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getLicenses() {
+  return portalState.licenses;
+}
+
+function getRelease() {
+  return portalState.release;
+}
+
+function getCustomerLicense() {
+  return portalState.customerLicense;
+}
+
+async function apiRequest(path, options = {}) {
+  const headers = new Headers(options.headers || {});
+  if (options.body !== undefined) headers.set("Content-Type", "application/json");
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: options.method || "GET",
+    headers,
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    credentials: "include",
+    cache: "no-store"
+  });
+
+  let payload = {};
   try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
+    payload = await response.json();
   } catch {
-    return fallback;
+    payload = {};
+  }
+  if (!response.ok) {
+    const error = new Error(payload.error || `Sunucu isteği başarısız (${response.status}).`);
+    error.status = response.status;
+    error.payload = payload;
+    throw error;
+  }
+  return payload;
+}
+
+async function loadPublicReleaseFromApi() {
+  const release = await apiRequest("/v1/public/release");
+  portalState.release = { ...defaultRelease, ...release };
+  return portalState.release;
+}
+
+async function checkAdminSession() {
+  try {
+    const session = await apiRequest("/v1/admin/session");
+    portalState.adminAuthenticated = Boolean(session.authenticated);
+    portalState.adminEmail = session.email || "";
+  } catch (error) {
+    if (error.status !== 401) throw error;
+    portalState.adminAuthenticated = false;
+    portalState.adminEmail = "";
+  }
+  return portalState.adminAuthenticated;
+}
+
+async function loginAdmin(email, password) {
+  const session = await apiRequest("/v1/admin/login", {
+    method: "POST",
+    body: { email, password }
+  });
+  portalState.adminAuthenticated = true;
+  portalState.adminEmail = session.email || email;
+  await loadAdminSnapshot();
+  return session;
+}
+
+async function logoutAdmin() {
+  await apiRequest("/v1/admin/logout", { method: "POST", body: {} });
+  portalState.adminAuthenticated = false;
+  portalState.adminEmail = "";
+  portalState.licenses = [];
+  portalState.customers = [];
+  portalState.requests = [];
+}
+
+async function loadAdminSnapshot() {
+  const snapshot = await apiRequest("/v1/admin/snapshot");
+  portalState.licenses = Array.isArray(snapshot.licenses) ? snapshot.licenses : [];
+  portalState.customers = Array.isArray(snapshot.customers) ? snapshot.customers : [];
+  portalState.requests = Array.isArray(snapshot.requests) ? snapshot.requests : [];
+  portalState.release = { ...defaultRelease, ...(snapshot.release || {}) };
+  portalState.adminAuthenticated = true;
+  return snapshot;
+}
+
+async function createLicenseOnApi(input) {
+  const result = await apiRequest("/v1/admin/licenses", { method: "POST", body: input });
+  await loadAdminSnapshot();
+  return result.license;
+}
+
+async function runLicenseActionOnApi(id, action) {
+  const result = await apiRequest(`/v1/admin/licenses/${encodeURIComponent(id)}/actions/${encodeURIComponent(action)}`, {
+    method: "POST",
+    body: {}
+  });
+  await loadAdminSnapshot();
+  return result.license;
+}
+
+async function deleteLicenseOnApi(id) {
+  await apiRequest(`/v1/admin/licenses/${encodeURIComponent(id)}`, { method: "DELETE" });
+  await loadAdminSnapshot();
+}
+
+async function saveReleaseOnApi(release) {
+  const result = await apiRequest("/v1/admin/release", { method: "PUT", body: release });
+  portalState.release = { ...defaultRelease, ...(result.release || {}) };
+  return portalState.release;
+}
+
+async function loginCustomer(key, machineCode) {
+  const session = await apiRequest("/v1/customer/login", {
+    method: "POST",
+    body: { key, machine_code: machineCode, version: getRelease().version }
+  });
+  portalState.customerAuthenticated = true;
+  await loadCustomerSnapshot();
+  return session;
+}
+
+async function loadCustomerSnapshot() {
+  try {
+    const snapshot = await apiRequest("/v1/customer/snapshot");
+    portalState.customerAuthenticated = true;
+    portalState.customerLicense = snapshot.license || null;
+    portalState.release = { ...defaultRelease, ...(snapshot.release || {}) };
+    return snapshot;
+  } catch (error) {
+    if (error.status !== 401) throw error;
+    portalState.customerAuthenticated = false;
+    portalState.customerLicense = null;
+    return null;
   }
 }
 
-function saveJson(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
+async function logoutCustomer() {
+  await apiRequest("/v1/customer/logout", { method: "POST", body: {} });
+  portalState.customerAuthenticated = false;
+  portalState.customerLicense = null;
+}
+
+async function createLicenseRequestOnApi(input) {
+  return apiRequest("/v1/license-requests", { method: "POST", body: input });
 }
 
 function toast(message) {
@@ -75,298 +198,56 @@ function toast(message) {
   }
   el.textContent = message;
   el.classList.add("show");
-  setTimeout(() => el.classList.remove("show"), 2600);
+  window.clearTimeout(toast.timer);
+  toast.timer = window.setTimeout(() => el.classList.remove("show"), 3000);
 }
 
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function randomBlock(size = 4) {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let out = "";
-  for (let i = 0; i < size; i += 1) out += chars[Math.floor(Math.random() * chars.length)];
-  return out;
-}
-
-function generateKey() {
-  return `OPL-${randomBlock()}-${randomBlock()}-${randomBlock()}-${randomBlock()}`;
-}
-
-function getLicenses() {
-  const rows = loadJson(STORE_LICENSES, null);
-  if (rows) return rows;
-  saveJson(STORE_LICENSES, seedLicenses);
-  return seedLicenses;
-}
-
-function setLicenses(rows) {
-  saveJson(STORE_LICENSES, rows);
-}
-
-function getRelease() {
-  return loadJson(STORE_RELEASE, defaultRelease);
-}
-
-function setRelease(release) {
-  saveJson(STORE_RELEASE, release);
-}
-
-function downloadJson(filename, data) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-}
-
-function statusClass(status) {
-  if (status === "Aktif") return "active";
-  if (status === "Askıda") return "pending";
-  return "cancel";
-}
-
-function renderLicenseCards() {
-  const target = qs("#licenseCards");
-  if (!target) return;
-
-  const query = (qs("#licenseSearch")?.value || "").trim().toLowerCase();
-  const rows = getLicenses().filter(row => {
-    const matchFilter = activeFilter === "all" || row.status === activeFilter;
-    const searchable = `${row.key} ${row.label} ${row.machine} ${row.modules.join(" ")}`.toLowerCase();
-    return matchFilter && searchable.includes(query);
-  });
-
-  qs("#licenseListInfo").textContent = `${rows.length} lisans listeleniyor`;
-  target.innerHTML = rows.map(row => `
-    <article class="license-card">
-      <div>
-        <div class="license-key">${safeText(row.key)}</div>
-        <h3>${safeText(row.label)}</h3>
-        <div class="license-meta">
-          <span class="pill ${statusClass(row.status)}">${safeText(row.status)}</span>
-          <span>Cihaz: ${safeText(row.max_devices)}</span>
-          <span>Bitiş: ${row.expires_at ? safeText(row.expires_at) : "Sınırsız"}</span>
-          <span>Son kontrol: ${safeText(row.last_check || "-")}</span>
-        </div>
-        <div class="license-meta" style="margin-top:10px">
-          <span>Makine ID: ${safeText(row.machine)}</span>
-          <span>Modüller: ${safeText(row.modules.join(", "))}</span>
-        </div>
-      </div>
-      <div class="license-actions">
-        <button class="green" data-license-action="active" data-key="${safeText(row.key)}" type="button">Aktif Yap</button>
-        <button class="amber" data-license-action="pause" data-key="${safeText(row.key)}" type="button">Askıya Al</button>
-        <button class="red" data-license-action="cancel" data-key="${safeText(row.key)}" type="button">Lisansı İptal Et</button>
-        <button data-license-action="copy" data-key="${safeText(row.key)}" type="button">Anahtarı Kopyala</button>
-      </div>
-    </article>
-  `).join("");
-
-  qsa("[data-license-action]", target).forEach(button => {
-    button.addEventListener("click", () => handleLicenseAction(button.dataset.licenseAction, button.dataset.key));
-  });
-}
-
-function handleLicenseAction(action, key) {
-  const rows = getLicenses();
-  const row = rows.find(item => item.key === key);
-  if (!row) return;
-
-  if (action === "copy") {
-    navigator.clipboard?.writeText(row.key);
-    toast("Lisans anahtarı kopyalandı.");
-    return;
-  }
-
-  if (action === "active") row.status = "Aktif";
-  if (action === "pause") row.status = "Askıda";
-  if (action === "cancel") row.status = "İptal";
-  setLicenses(rows);
-  renderAdminStats();
-  renderLicenseCards();
-  renderJsonPreview();
-}
-
-function renderAdminStats() {
-  const rows = getLicenses();
-  const release = getRelease();
-  if (qs("#licenseCount")) qs("#licenseCount").textContent = rows.length;
-  if (qs("#activeCount")) qs("#activeCount").textContent = rows.filter(row => row.status === "Aktif").length;
-  if (qs("#releaseVersion")) qs("#releaseVersion").textContent = release.version;
-}
-
-function renderJsonPreview() {
-  const preview = qs("#jsonPreview");
-  if (!preview) return;
-  const payload = {
-    generated_at: new Date().toISOString(),
-    licenses: getLicenses().map(row => ({
-      key: row.key,
-      label: row.label,
-      machine: row.machine,
-      status: row.status,
-      max_devices: row.max_devices,
-      expires_at: row.expires_at,
-      modules: row.modules.map(name => moduleMap[name] || name),
-      access: row.access || "unlimited",
-      note: row.note
-    }))
-  };
-  preview.textContent = JSON.stringify(payload, null, 2);
-}
-
-function initAdmin() {
-  if (document.body.dataset.page !== "admin") return;
-
-  renderAdminStats();
-  renderLicenseCards();
-  renderJsonPreview();
-  fillReleaseForm();
-
-  qs("#licenseSearch")?.addEventListener("input", renderLicenseCards);
-  qsa("[data-filter]").forEach(button => {
-    button.addEventListener("click", () => {
-      activeFilter = button.dataset.filter;
-      qsa("[data-filter]").forEach(btn => btn.classList.remove("active"));
-      if (activeFilter === "Aktif") button.classList.add("active");
-      renderLicenseCards();
-    });
-  });
-
-  qs("#licUnlimited")?.addEventListener("change", event => {
-    const expiry = qs("#licExpiry");
-    expiry.disabled = event.target.checked;
-    if (event.target.checked) expiry.value = "";
-  });
-
-  qs("#licenseForm")?.addEventListener("submit", event => {
-    event.preventDefault();
-    const modules = qsa("input[name='module']:checked").map(item => item.value);
-    const license = {
-      key: generateKey(),
-      label: qs("#licLabel").value.trim(),
-      machine: qs("#licMachine").value.trim(),
-      status: "Aktif",
-      created_at: new Date().toLocaleString("tr-TR"),
-      last_check: "-",
-      version: getRelease().version,
-      max_devices: Number(qs("#licDevices").value || 1),
-      expires_at: qs("#licUnlimited").checked ? null : (qs("#licExpiry").value || null),
-      modules,
-      access: "unlimited",
-      note: qs("#licNote").value.trim()
-    };
-    const rows = getLicenses();
-    rows.unshift(license);
-    setLicenses(rows);
-    event.target.reset();
-    qs("#licDevices").value = "1";
-    renderAdminStats();
-    renderLicenseCards();
-    renderJsonPreview();
-    navigator.clipboard?.writeText(license.key);
-    toast("Lisans oluşturuldu ve anahtar kopyalandı.");
-  });
-
-  qs("#releaseForm")?.addEventListener("submit", event => {
-    event.preventDefault();
-    const release = {
-      version: qs("#relVersion").value.trim() || "1.1.2",
-      date: todayIso(),
-      setup_url: qs("#relSetup").value.trim(),
-      update_url: qs("#relUpdate").value.trim(),
-      sha256: qs("#relSha").value.trim(),
-      required: false,
-      notes: qs("#relNotes").value.trim()
-    };
-    setRelease(release);
-    renderAdminStats();
-    renderJsonPreview();
-    toast("Sürüm bilgisi kaydedildi. version.json indirebilirsin.");
-  });
-
-  qs("#downloadVersionJson")?.addEventListener("click", () => {
-    downloadJson("version.json", getRelease());
-  });
-
-  qs("#downloadLicensesJson")?.addEventListener("click", () => {
-    downloadJson("licenses.json", {
-      generated_at: new Date().toISOString(),
-      licenses: getLicenses()
-    });
-  });
-}
-
-function fillReleaseForm() {
-  const release = getRelease();
-  if (qs("#relVersion")) qs("#relVersion").value = release.version || "";
-  if (qs("#relSetup")) qs("#relSetup").value = release.setup_url || "";
-  if (qs("#relUpdate")) qs("#relUpdate").value = release.update_url || "";
-  if (qs("#relSha")) qs("#relSha").value = release.sha256 || "";
-  if (qs("#relNotes")) qs("#relNotes").value = release.notes || "";
-}
-
-function initRequest() {
+async function initLegacyRequestPage() {
   if (document.body.dataset.page !== "request") return;
-
+  const form = qs("#requestForm");
   const output = qs("#requestOutput");
-  const mail = qs("#mailRequest");
-  qs("#requestForm")?.addEventListener("submit", event => {
+  form?.addEventListener("submit", async event => {
     event.preventDefault();
     const modules = qsa("input[name='reqModule']:checked").map(item => item.value);
-    const text = [
-      "OptiLine Pro Lisans İsteği",
-      "",
-      `Firma / Müşteri: ${qs("#reqName").value.trim()}`,
-      `İletişim: ${qs("#reqContact").value.trim() || "-"}`,
-      `Makine Kodu: ${qs("#reqMachine").value.trim()}`,
-      `İstenen Modüller: ${modules.join(", ") || "-"}`,
-      `Not: ${qs("#reqNote").value.trim() || "-"}`,
-      "",
-      "Bu bilgilerle lisans hazırlanmasını rica ederim."
-    ].join("\n");
-    output.value = text;
-    mail.href = `mailto:?subject=${encodeURIComponent("OptiLine Pro Lisans İsteği")}&body=${encodeURIComponent(text)}`;
-    toast("Lisans istek metni hazırlandı.");
-  });
-
-  qs("#copyRequest")?.addEventListener("click", () => {
-    if (!output.value.trim()) {
-      toast("Önce istek metni oluştur.");
-      return;
+    try {
+      const result = await createLicenseRequestOnApi({
+        customer_name: qs("#reqName").value.trim(),
+        contact: qs("#reqContact").value.trim(),
+        machine_code: qs("#reqMachine").value.trim(),
+        modules,
+        note: qs("#reqNote").value.trim()
+      });
+      output.value = `Lisans isteğiniz merkezi sisteme kaydedildi.\nİstek No: ${result.request.id}`;
+      toast("Lisans isteği gönderildi.");
+    } catch (error) {
+      output.value = error.message;
+      toast(error.message);
     }
-    navigator.clipboard?.writeText(output.value);
-    toast("İstek metni kopyalandı.");
   });
+  qs("#copyRequest")?.addEventListener("click", () => navigator.clipboard?.writeText(output.value || ""));
 }
 
-async function initDownload() {
+async function initLegacyDownloadPage() {
   if (document.body.dataset.page !== "download") return;
-
-  let release = getRelease();
   try {
-    const response = await fetch("version.json", { cache: "no-store" });
-    if (response.ok) release = await response.json();
-  } catch {
-    // Local storage release stays as fallback.
+    const release = await loadPublicReleaseFromApi();
+    if (qs("#publicVersion")) qs("#publicVersion").textContent = release.version || "-";
+    if (qs("#publicDate")) qs("#publicDate").textContent = release.date || "Tarih yok";
+    if (qs("#publicSha")) qs("#publicSha").textContent = release.sha256 || "-";
+    if (qs("#publicRequired")) qs("#publicRequired").textContent = release.required ? "Evet" : "Hayır";
+    if (qs("#publicNotes")) qs("#publicNotes").textContent = release.notes || "-";
+    if (qs("#setupLink")) qs("#setupLink").href = release.setup_url || "#";
+    if (qs("#updateLink")) qs("#updateLink").href = release.update_url || "#";
+  } catch (error) {
+    toast(`Sürüm bilgisi alınamadı: ${error.message}`);
   }
-
-  qs("#publicVersion").textContent = release.version || "-";
-  qs("#publicDate").textContent = release.date || "Tarih yok";
-  qs("#publicSha").textContent = release.sha256 || "-";
-  qs("#publicRequired").textContent = release.required ? "Evet" : "Hayır";
-  qs("#publicNotes").textContent = release.notes || "-";
-  if (qs("#setupLink")) qs("#setupLink").href = release.setup_url || "#";
-  if (qs("#updateLink")) qs("#updateLink").href = release.update_url || "#";
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  initAdmin();
-  initRequest();
-  initDownload();
+  if (document.body.dataset.page === "admin") {
+    location.replace("index.html#admin/admin-dashboard");
+    return;
+  }
+  initLegacyRequestPage();
+  initLegacyDownloadPage();
 });
