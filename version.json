@@ -1,9 +1,11 @@
 {
-  "version": "1.1.1",
-  "date": "2026-07-16",
-  "setup_url": "",
-  "update_url": "",
-  "sha256": "",
+  "version": "1.1.2",
+  "date": "2026-07-17",
+  "setup_url": "https://api.optilinepro.com/v1/public/release/setup",
+  "update_url": "https://api.optilinepro.com/v1/public/release/download",
+  "sha256": "53ac8e07bafaf4e08c514a9b6d51c58d283c2bb4967c8fc2ea90d0ec2a46f25b",
   "required": false,
-  "notes": "OptiLine Pro GitHub dağıtım kaydı. Setup ve update linkleri GitHub repository oluşturulduktan sonra güncellenecek."
+  "channel": "stable",
+  "size_bytes": 91516629,
+  "notes": "Canli lisans iptal ve silme denetimi, merkezi guncelleme ve kurulum paketi."
 }
