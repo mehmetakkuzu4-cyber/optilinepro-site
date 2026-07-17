@@ -11,8 +11,9 @@ const uiPages = {
   ],
   admin: [
     ["admin-dashboard", "Yönetim Özeti"], ["licenses", "Lisans Yönetimi"],
-    ["customers", "Müşteriler"],
-    ["versions", "Sürüm Yönetimi"], ["publish-update", "Güncelleme Yayınla"]
+    ["customers", "Müşteriler"], ["admin-devices", "Cihazlar"],
+    ["admin-support", "Destek Talepleri"], ["versions", "Sürüm Yönetimi"],
+    ["publish-update", "Güncelleme Yayınla"], ["audit-logs", "İşlem Kayıtları"]
   ]
 };
 
@@ -258,6 +259,18 @@ function profileView() {
     <div class="grid-2"><article class="card"><h3>${safeText(license?.label || "OptiLine Pro müşterisi")}</h3><p class="muted">Lisans anahtarı</p><strong>${safeText(license?.key || "-")}</strong></article><article class="card"><h3>Yetkili modüller</h3><p>${safeText((license?.modules || []).join(", ") || "Modül tanımlanmamış")}</p><p class="muted">Cihaz hakkı: ${safeText(license?.max_devices || 0)}</p></article></div>`;
 }
 
+function customerTicketsView() {
+  const tickets = portalState.tickets || [];
+  return `${sectionHead("Destek talepleri", "Teknik, lisans ve kurulum taleplerinizi merkezi sisteme gönderin.")}
+    <form class="form-panel form-grid" id="customerSupportForm">
+      <label>Kategori<select id="supportCategory"><option>Teknik</option><option>Lisans</option><option>Kurulum</option><option>Güncelleme</option></select></label>
+      <label>Konu<input id="supportSubject" required maxlength="160"></label>
+      <label style="grid-column:1/-1">Açıklama<textarea id="supportMessage" required maxlength="5000"></textarea></label>
+      <button class="button primary" type="submit">Talep oluştur</button>
+    </form>
+    <div class="table-wrap" style="margin-top:18px"><table><thead><tr><th>No</th><th>Konu</th><th>Kategori</th><th>Tarih</th><th>Durum</th></tr></thead><tbody>${tickets.map(ticket => `<tr><td>${safeText(ticket.id)}</td><td>${safeText(ticket.subject)}</td><td>${safeText(ticket.category)}</td><td>${safeText(ticket.created_at)}</td><td><span class="badge ${ticket.status === "Kapalı" ? "good" : "warn"}">${safeText(ticket.status)}</span></td></tr>`).join("") || `<tr><td colspan="5">Henüz destek talebi yok.</td></tr>`}</tbody></table></div>`;
+}
+
 function adminDashboardView() {
   const rows = getLicenses();
   const release = getRelease();
@@ -269,6 +282,24 @@ function adminDashboardView() {
 function customersView() {
   const customers = portalState.customers || [];
   return `${sectionHead("Müşteriler", "Merkezi veritabanındaki müşteri ve firma kayıtları.")}<div class="grid-2">${customers.map(customer => `<article class="card"><h3>${safeText(customer.name || customer.company || "Müşteri")}</h3><p class="muted">${safeText(customer.company || "Firma bilgisi yok")}</p><p>${getLicenses().filter(item => item.customer_id === customer.id || item.label === customer.name).length} lisans kaydı</p></article>`).join("") || `<article class="card empty">Henüz müşteri kaydı yok.</article>`}</div>`;
+}
+
+function adminDevicesView() {
+  const devices = portalState.devices || [];
+  return `${sectionHead("Cihazlar", "Tüm lisanslara bağlı bilgisayarlar ve son bağlantı bilgileri.")}
+    <div class="table-wrap"><table><thead><tr><th>Müşteri</th><th>Makine kodu</th><th>Aktivasyon</th><th>Son kontrol</th><th>Sürüm</th><th>Durum</th></tr></thead><tbody>${devices.map(device => `<tr><td>${safeText(device.label)}</td><td>${safeText(device.machine)}</td><td>${safeText(device.activated_at)}</td><td>${safeText(device.last_check || "-")}</td><td>${safeText(device.version || "-")}</td><td><span class="badge ${licenseBadgeClass(device.status)}">${safeText(device.status)}</span></td></tr>`).join("") || `<tr><td colspan="6">Bağlı cihaz yok.</td></tr>`}</tbody></table></div>`;
+}
+
+function adminSupportView() {
+  const tickets = portalState.tickets || [];
+  return `${sectionHead("Destek talepleri", "Müşterilerin merkezi sisteme gönderdiği talepler.")}
+    <div class="grid-2">${tickets.map(ticket => `<article class="card"><div class="section-head"><div><h3>${safeText(ticket.subject)}</h3><p>${safeText(ticket.label)} · ${safeText(ticket.category)} · ${safeText(ticket.created_at)}</p></div><span class="badge ${ticket.status === "Kapalı" ? "good" : "warn"}">${safeText(ticket.status)}</span></div><p>${safeText(ticket.message)}</p><div class="actions"><button class="button ghost" data-support-action="open" data-ticket-id="${safeText(ticket.id)}" type="button">Açık</button><button class="button ghost" data-support-action="progress" data-ticket-id="${safeText(ticket.id)}" type="button">İşlemde</button><button class="button primary" data-support-action="close" data-ticket-id="${safeText(ticket.id)}" type="button">Kapat</button></div></article>`).join("") || `<article class="card empty">Destek talebi yok.</article>`}</div>`;
+}
+
+function auditLogView() {
+  const rows = portalState.audit || [];
+  return `${sectionHead("İşlem kayıtları", "Lisans, cihaz, destek ve sürüm işlemlerinin denetim izi.")}
+    <div class="table-wrap"><table><thead><tr><th>Tarih</th><th>İşlemi yapan</th><th>İşlem</th><th>Kayıt türü</th><th>Kayıt</th></tr></thead><tbody>${rows.map(row => `<tr><td>${safeText(row.created_at)}</td><td>${safeText(row.actor)}</td><td>${safeText(row.action)}</td><td>${safeText(row.entity_type)}</td><td>${safeText(row.entity_id || "-")}</td></tr>`).join("") || `<tr><td colspan="5">İşlem kaydı yok.</td></tr>`}</tbody></table></div>`;
 }
 
 function versionsView() {
@@ -312,13 +343,16 @@ function currentView() {
     "my-licenses": () => licensesView(false),
     devices: devicesView,
     "customer-downloads": () => downloadsView(true),
-    tickets: () => genericView("Destek talepleri", "Açık ve sonuçlanan destek kayıtlarınızı görüntüleyin."),
+    tickets: customerTicketsView,
     profile: profileView,
     "admin-dashboard": adminDashboardView,
     licenses: () => licensesView(true),
     customers: customersView,
+    "admin-devices": adminDevicesView,
+    "admin-support": adminSupportView,
     versions: versionsView,
     "publish-update": publishUpdateView,
+    "audit-logs": auditLogView,
   };
   return (views[uiCurrent] || (() => genericView("Sayfa hazırlanıyor", "Bu bölüm henüz hazırlanmadı.")))();
 }
@@ -388,6 +422,13 @@ uiScreen.addEventListener("click", event => {
   const actionButton = event.target.closest("[data-license-action]");
   if (actionButton) {
     handleUiLicenseAction(actionButton.dataset.licenseAction, actionButton.dataset.key);
+    return;
+  }
+  const supportButton = event.target.closest("[data-support-action]");
+  if (supportButton) {
+    runSupportTicketActionOnApi(supportButton.dataset.ticketId, supportButton.dataset.supportAction)
+      .then(() => { renderScreen(); showUiToast("Destek talebi güncellendi."); })
+      .catch(error => showUiToast(error.message));
     return;
   }
   if (event.target.closest("[data-admin-logout]")) {
@@ -492,6 +533,21 @@ uiScreen.addEventListener("submit", async event => {
       });
       event.target.reset();
       showUiToast(`Lisans isteği gönderildi. İstek no: ${result.request.id}`);
+    } catch (error) {
+      showUiToast(error.message);
+    }
+    return;
+  }
+  if (event.target.id === "customerSupportForm") {
+    try {
+      const result = await createSupportTicketOnApi({
+        category: document.querySelector("#supportCategory").value,
+        subject: document.querySelector("#supportSubject").value.trim(),
+        message: document.querySelector("#supportMessage").value.trim()
+      });
+      event.target.reset();
+      renderScreen();
+      showUiToast(`Destek talebi oluşturuldu: ${result.id}`);
     } catch (error) {
       showUiToast(error.message);
     }

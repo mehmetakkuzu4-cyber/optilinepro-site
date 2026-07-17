@@ -14,6 +14,9 @@ const portalState = {
   licenses: [],
   customers: [],
   requests: [],
+  devices: [],
+  tickets: [],
+  audit: [],
   release: { ...defaultRelease },
   adminAuthenticated: false,
   adminEmail: "",
@@ -116,6 +119,9 @@ async function logoutAdmin() {
   portalState.licenses = [];
   portalState.customers = [];
   portalState.requests = [];
+  portalState.devices = [];
+  portalState.tickets = [];
+  portalState.audit = [];
 }
 
 async function loadAdminSnapshot() {
@@ -123,6 +129,9 @@ async function loadAdminSnapshot() {
   portalState.licenses = Array.isArray(snapshot.licenses) ? snapshot.licenses : [];
   portalState.customers = Array.isArray(snapshot.customers) ? snapshot.customers : [];
   portalState.requests = Array.isArray(snapshot.requests) ? snapshot.requests : [];
+  portalState.devices = Array.isArray(snapshot.devices) ? snapshot.devices : [];
+  portalState.tickets = Array.isArray(snapshot.tickets) ? snapshot.tickets : [];
+  portalState.audit = Array.isArray(snapshot.audit) ? snapshot.audit : [];
   portalState.release = { ...defaultRelease, ...(snapshot.release || {}) };
   portalState.adminAuthenticated = true;
   return snapshot;
@@ -169,6 +178,7 @@ async function loadCustomerSnapshot() {
     const snapshot = await apiRequest("/v1/customer/snapshot");
     portalState.customerAuthenticated = true;
     portalState.customerLicense = snapshot.license || null;
+    portalState.tickets = Array.isArray(snapshot.tickets) ? snapshot.tickets : [];
     portalState.release = { ...defaultRelease, ...(snapshot.release || {}) };
     return snapshot;
   } catch (error) {
@@ -183,6 +193,22 @@ async function logoutCustomer() {
   await apiRequest("/v1/customer/logout", { method: "POST", body: {} });
   portalState.customerAuthenticated = false;
   portalState.customerLicense = null;
+  portalState.tickets = [];
+}
+
+async function createSupportTicketOnApi(input) {
+  const result = await apiRequest("/v1/customer/support-tickets", { method: "POST", body: input });
+  await loadCustomerSnapshot();
+  return result.ticket;
+}
+
+async function runSupportTicketActionOnApi(id, action) {
+  const result = await apiRequest(`/v1/admin/support-tickets/${encodeURIComponent(id)}/actions/${encodeURIComponent(action)}`, {
+    method: "POST",
+    body: {}
+  });
+  await loadAdminSnapshot();
+  return result.ticket;
 }
 
 async function createLicenseRequestOnApi(input) {
