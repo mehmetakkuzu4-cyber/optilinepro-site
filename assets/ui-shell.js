@@ -59,11 +59,13 @@ function renderMetrics() {
 
 function renderNav() {
   uiNav.innerHTML = "";
+  let activeButton = null;
   uiPages[uiMode].forEach(([id, label]) => {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = label;
     button.classList.toggle("active", id === uiCurrent);
+    if (id === uiCurrent) activeButton = button;
     button.addEventListener("click", () => {
       uiCurrent = id;
       history.replaceState(null, "", `#${uiMode}/${uiCurrent}`);
@@ -72,6 +74,9 @@ function renderNav() {
     });
     uiNav.appendChild(button);
   });
+  if (activeButton && window.matchMedia("(max-width: 780px)").matches) {
+    requestAnimationFrame(() => activeButton.scrollIntoView({ behavior: "auto", block: "nearest", inline: "center" }));
+  }
 }
 
 function homeView() {
