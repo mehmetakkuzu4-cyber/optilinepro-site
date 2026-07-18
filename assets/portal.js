@@ -215,6 +215,15 @@ async function createLicenseRequestOnApi(input) {
   return apiRequest("/v1/license-requests", { method: "POST", body: input });
 }
 
+async function runLicenseRequestActionOnApi(id, action, input = {}) {
+  const result = await apiRequest(`/v1/admin/license-requests/${encodeURIComponent(id)}/actions/${encodeURIComponent(action)}`, {
+    method: "POST",
+    body: input
+  });
+  await loadAdminSnapshot();
+  return result;
+}
+
 function toast(message) {
   let el = qs(".toast");
   if (!el) {

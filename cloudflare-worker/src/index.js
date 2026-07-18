@@ -119,6 +119,18 @@ export default {
         );
       }
 
+      const requestActionMatch = url.pathname.match(/^\/v1\/admin\/license-requests\/([^/]+)\/actions\/([^/]+)$/);
+      if (requestActionMatch && request.method === "POST") {
+        return licenseRequestAction(
+          decodeURIComponent(requestActionMatch[1]),
+          decodeURIComponent(requestActionMatch[2]),
+          request,
+          env,
+          cors,
+          admin
+        );
+      }
+
       if (url.pathname === "/v1/admin/release" && request.method === "PUT") {
         return saveRelease(request, env, cors, admin);
       }
@@ -538,20 +550,142 @@ async function createLicenseRequest(request, env, cors) {
   const input = await bodyJson(request);
   const customerName = String(input.customer_name || "").trim();
   const machineCode = String(input.machine_code || "").trim();
+  const company = String(input.company || "").trim();
+  const email = String(input.email || "").trim();
+  const phone = String(input.phone || "").trim();
+  const durationMonths = Math.max(0, Math.min(24, Number(input.requested_duration_months || 0)));
+  const maxDevices = Math.max(1, Math.min(20, Number(input.requested_max_devices || 1)));
   const modules = [...new Set(Array.isArray(input.modules) ? input.modules.filter(module => MODULES.has(module)) : [])];
-  if (!customerName || !machineCode) return json({ error: "Müşteri adı ve makine kodu gerekli." }, 400, cors);
+  if (String(input.website || "").trim()) return json({ error: "Talep doğrulanamadı." }, 400, cors);
+  if (!customerName || !machineCode || !email) return json({ error: "Yetkili adı, e-posta ve makine kodu gerekli." }, 400, cors);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: "Geçerli bir e-posta adresi girin." }, 400, cors);
+  if (!modules.length) return json({ error: "En az bir modül seçin." }, 400, cors);
+  if (customerName.length > 120 || company.length > 160 || email.length > 180 || phone.length > 40 || machineCode.length > 160) {
+    return json({ error: "Talep alanlarından biri izin verilen uzunluğu aşıyor." }, 400, cors);
+  }
   const timestamp = now();
   const requestId = id("req");
   await env.DB.prepare(`INSERT INTO license_requests (
-    id, customer_name, contact, machine_code, modules_json, note, status, created_at, updated_at
-  ) VALUES (?, ?, ?, ?, ?, ?, 'Yeni', ?, ?)`)
-    .bind(requestId, customerName, input.contact || null, machineCode, JSON.stringify(modules), input.note || null, timestamp, timestamp).run();
-  return json({ request: { id: requestId, status: "Yeni" } }, 201, cors);
+    id, customer_name, contact, machine_code, modules_json, note, status, created_at, updated_at,
+    company, email, phone, requested_duration_months, requested_max_devices
+  ) VALUES (?, ?, ?, ?, ?, ?, 'Yeni', ?, ?, ?, ?, ?, ?, ?)`)
+    .bind(requestId, customerName, email || phone || null, machineCode, JSON.stringify(modules),
+      String(input.note || "").trim() || null, timestamp, timestamp, company || null, email,
+      phone || null, durationMonths || null, maxDevices).run();
+  return json({ request: { id: requestId, status: "Yeni", created_at: timestamp } }, 201, cors);
 }
 
 async function listRequests(env) {
   const result = await env.DB.prepare("SELECT * FROM license_requests ORDER BY created_at DESC LIMIT 500").all();
-  return (result.results || []).map(row => ({ ...row, modules: JSON.parse(row.modules_json || "[]") }));
+  return (result.results || []).map(row => {
+    let modules = [];
+    try {
+      const parsed = JSON.parse(row.modules_json || "[]");
+      modules = Array.isArray(parsed) ? parsed.filter(module => MODULES.has(module)) : [];
+    } catch (_) {
+      modules = [];
+    }
+    return { ...row, modules };
+  });
+}
+
+async function licenseRequestAction(requestId, action, request, env, cors, admin) {
+  const input = await bodyJson(request);
+  const source = await env.DB.prepare("SELECT * FROM license_requests WHERE id = ?").bind(requestId).first();
+  if (!source) return json({ error: "Lisans talebi bulunamadı." }, 404, cors);
+  if (source.status === "Onaylandı" || source.license_id) {
+    return json({ error: "Onaylanmış lisans talebi yeniden değiştirilemez." }, 409, cors);
+  }
+
+  const timestamp = now();
+  const decisionNote = String(input.decision_note || "").trim().slice(0, 2000);
+  if (action === "review" || action === "reject") {
+    const status = action === "review" ? "İnceleniyor" : "Reddedildi";
+    await env.DB.batch([
+      env.DB.prepare(`UPDATE license_requests SET status = ?, decision_note = ?, reviewed_at = ?,
+        reviewed_by = ?, updated_at = ? WHERE id = ?`)
+        .bind(status, decisionNote || null, timestamp, admin.email, timestamp, requestId),
+      auditStatement(env, admin.email, `license_request.${action}`, "license_request", requestId, { status, decision_note: decisionNote })
+    ]);
+    const requests = await listRequests(env);
+    return json({ request: requests.find(item => item.id === requestId) }, 200, cors);
+  }
+
+  if (action !== "approve") return json({ error: "Geçersiz talep işlemi." }, 400, cors);
+  let requestedModules = [];
+  try {
+    const parsed = JSON.parse(source.modules_json || "[]");
+    requestedModules = Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    requestedModules = [];
+  }
+  const moduleInput = Array.isArray(input.modules) ? input.modules : requestedModules;
+  const modules = [...new Set(moduleInput.filter(module => MODULES.has(module)))];
+  const customerName = String(input.customer_name || source.customer_name || "").trim();
+  const company = String(input.company || source.company || "").trim();
+  const email = String(input.email || source.email || source.contact || "").trim();
+  const phone = String(input.phone || source.phone || "").trim();
+  const machine = String(input.machine || source.machine_code || "").trim();
+  const label = String(input.label || company || customerName).trim();
+  const maxDevices = Math.max(1, Math.min(100, Number(input.max_devices || source.requested_max_devices || 1)));
+  const expiresInput = String(input.expires_at || "").trim();
+  if (expiresInput && !/^\d{4}-\d{2}-\d{2}$/.test(expiresInput)) {
+    return json({ error: "Bitiş tarihi geçerli bir tarih olmalı." }, 400, cors);
+  }
+  const expiresAt = expiresInput || null;
+  const note = String(input.note || source.note || "").trim();
+  if (customerName.length > 120 || company.length > 160 || email.length > 180 || phone.length > 40 ||
+      machine.length > 160 || label.length > 160 || note.length > 4000) {
+    return json({ error: "Onay alanlarindan biri izin verilen uzunlugu asiyor." }, 400, cors);
+  }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return json({ error: "Gecerli bir e-posta adresi girin." }, 400, cors);
+  }
+  if (!customerName || !label || !modules.length) return json({ error: "Müşteri, lisans etiketi ve modül seçimi gerekli." }, 400, cors);
+
+  const existingCustomer = await env.DB.prepare(`SELECT id FROM customers
+    WHERE (? <> '' AND lower(email) = lower(?)) OR lower(name) = lower(?) LIMIT 1`)
+    .bind(email, email, customerName).first();
+  const customerId = existingCustomer?.id || id("cus");
+  const licenseId = id("lic");
+  const key = licenseKey();
+  const statements = [];
+  if (existingCustomer) {
+    statements.push(env.DB.prepare(`UPDATE customers SET name = ?, company = ?, email = ?, phone = ?,
+      note = COALESCE(?, note), updated_at = ? WHERE id = ?`)
+      .bind(customerName, company || null, email || null, phone || null, note || null, timestamp, customerId));
+  } else {
+    statements.push(env.DB.prepare(`INSERT INTO customers (
+      id, name, email, phone, company, note, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .bind(customerId, customerName, email || null, phone || null, company || null, note || null, timestamp, timestamp));
+  }
+  statements.push(env.DB.prepare(`INSERT INTO licenses (
+    id, license_key, customer_id, label, machine_code, status, max_devices, expires_at,
+    access_level, note, program_version, last_check, created_at, updated_at
+  ) VALUES (?, ?, ?, ?, ?, 'Aktif', ?, ?, 'unlimited', ?, ?, NULL, ?, ?)`)
+    .bind(licenseId, key, customerId, label, machine || null, maxDevices, expiresAt,
+      note || null, input.version || null, timestamp, timestamp));
+  modules.forEach(module => statements.push(
+    env.DB.prepare("INSERT INTO license_modules (license_id, module) VALUES (?, ?)").bind(licenseId, module)
+  ));
+  if (machine) {
+    statements.push(env.DB.prepare(`INSERT INTO devices (
+      id, license_id, machine_code, activated_at, last_check, program_version, status
+    ) VALUES (?, ?, ?, ?, NULL, ?, 'Aktif')`).bind(id("dev"), licenseId, machine, timestamp, input.version || null));
+  }
+  statements.push(env.DB.prepare(`UPDATE license_requests SET status = 'Onaylandı', decision_note = ?,
+    reviewed_at = ?, reviewed_by = ?, license_id = ?, updated_at = ? WHERE id = ?`)
+    .bind(decisionNote || null, timestamp, admin.email, licenseId, timestamp, requestId));
+  statements.push(auditStatement(env, admin.email, "license_request.approve", "license_request", requestId, {
+    license_id: licenseId, label, modules, max_devices: maxDevices, expires_at: expiresAt
+  }));
+  await env.DB.batch(statements);
+  const [requests, licenses] = await Promise.all([listRequests(env), listLicenses(env)]);
+  return json({
+    request: requests.find(item => item.id === requestId),
+    license: licenses.find(item => item.id === licenseId)
+  }, 201, cors);
 }
 
 async function listCustomers(env) {

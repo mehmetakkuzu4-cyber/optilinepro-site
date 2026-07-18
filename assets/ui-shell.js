@@ -10,7 +10,7 @@ const uiPages = {
     ["tickets", "Destek Talepleri"], ["profile", "Hesabım"]
   ],
   admin: [
-    ["admin-dashboard", "Yönetim Özeti"], ["licenses", "Lisans Yönetimi"],
+    ["admin-dashboard", "Yönetim Özeti"], ["license-requests", "Lisans Talepleri"], ["licenses", "Lisans Yönetimi"],
     ["customers", "Müşteriler"], ["admin-devices", "Cihazlar"],
     ["admin-support", "Destek Talepleri"], ["versions", "Sürüm Yönetimi"],
     ["publish-update", "Güncelleme Yayınla"], ["audit-logs", "İşlem Kayıtları"]
@@ -23,6 +23,9 @@ let publicRelease = defaultRelease;
 let uiLicenseFilter = "all";
 let uiLicenseSearch = "";
 let uiLicenseLayout = "cards";
+let uiRequestFilter = "Yeni";
+let uiSelectedRequestId = "";
+let uiLicenseRequestSuccess = null;
 
 const uiNav = document.querySelector("#sideNav");
 const uiScreen = document.querySelector("#screen");
@@ -45,11 +48,12 @@ function renderMetrics() {
   const customerDevices = portalState.customer?.devices?.length || 0;
   const customerTickets = portalState.customer?.tickets?.length || 0;
   const expiring = licenses.filter(item => item.expires_at && new Date(item.expires_at) - new Date() < 31 * 86400000).length;
+  const pendingRequests = (portalState.requests || []).filter(item => ["Yeni", "İnceleniyor"].includes(item.status)).length;
   const values = uiMode === "public"
     ? [["Optimizasyon modülü", "4"], ["Rapor formatı", "2"], ["Güncel sürüm", publicRelease.version || "1.1.2"], ["Windows", "10 / 11"]]
     : uiMode === "customer"
       ? [["Aktif lisans", active], ["Kayıtlı cihaz", customerDevices], ["Güncel sürüm", publicRelease.version || "1.1.2"], ["Destek talebi", customerTickets]]
-      : [["Aktif lisans", active], ["Müşteri", customers], ["Güncel sürüm", getRelease().version || "1.1.2"], ["Yaklaşan bitiş", expiring]];
+      : [["Aktif lisans", active], ["Müşteri", customers], ["Bekleyen talep", pendingRequests], ["Güncel sürüm", getRelease().version || "1.1.2"]];
   uiMetrics.innerHTML = values.map(([label, value]) => metric(label, value)).join("");
 }
 
@@ -101,7 +105,63 @@ function featuresView() {
 }
 
 function productView() {
-  return `<div class="grid-2"><article class="card"><span class="badge">OptiLine Pro 1.1.2</span><h1 style="margin-top:16px">Kesim planlamasının merkezi.</h1><p class="lead">Dört uzman modül, ortak stok yapısı, ölçü girişleri ve üretim raporları aynı masaüstü deneyiminde birleşir.</p><div class="notice" style="margin-top:22px">Profil, levha, stok danışmanı ve proje optimizasyonu ayrı ayrı lisanslanabilir.</div></article>${productVisual()}</div>`;
+  const stories = [
+    {
+      eyebrow: "Tek merkez",
+      title: "Dört uzman modül, tek üretim platformu.",
+      text: "Proje, profil, stok danışmanı ve levha optimizasyonu aynı masaüstü deneyiminde birleşir. Kullanıcı yalnızca lisansındaki modülleri görür; tüm üretim verisi düzenli bir akışta ilerler.",
+      image: "assets/product/overview.png",
+      alt: "OptiLine Pro modül seçim ekranı"
+    },
+    {
+      eyebrow: "Proje yönetimi",
+      title: "Dağınık üretim verisini kontrol edilebilir bir projeye dönüştürün.",
+      text: "Kaynak klasörleri, işleme şablonları ve proje kayıtları tek çalışma altında tutulur. Büyük işlerde bile hangi verinin nereden geldiği ve çıktının nereye gideceği baştan bellidir.",
+      image: "assets/product/project.png",
+      alt: "OptiLine Pro proje yönetimi ekranı"
+    },
+    {
+      eyebrow: "Üretim akışı",
+      title: "Hazırlıktan sonuca kadar bütün süreç görünür.",
+      text: "Profil seçimi, stok seçimi, optimizasyon ve raporlama adımları aynı proje içinde ilerler. Ekip, eksik ya da güncelliğini kaybetmiş verilerle üretime başlamaz.",
+      image: "assets/product/production-flow.png",
+      alt: "OptiLine Pro üretim akışı ekranı"
+    },
+    {
+      eyebrow: "Optimizasyon sonucu",
+      title: "Planı yalnızca hesaplamayın, üretimden önce görün.",
+      text: "Kesim planları, kullanılan boylar, fire, parça dağılımı ve üretilecek adetler aynı sonuç ekranında okunur. Operatörün ilk bakışta anlayabileceği net bir üretim görünümü sunulur.",
+      image: "assets/product/profile-result.png",
+      alt: "OptiLine Pro profil optimizasyon sonucu"
+    },
+    {
+      eyebrow: "Stok danışmanı",
+      title: "Stok kararını tahminle değil, karşılaştırmalı verilerle verin.",
+      text: "Farklı stok boyları toplam metre, fire ve maliyet açısından karşılaştırılır. En avantajlı kombinasyon açıkça öne çıkarılır; alternatiflerin işletmeye etkisi aynı ekranda görülür.",
+      image: "assets/product/advisor-results.png",
+      alt: "OptiLine Pro stok danışmanı sonuçları"
+    },
+    {
+      eyebrow: "Karar özeti",
+      title: "Teknik sonucu yöneticinin anlayacağı özete çevirin.",
+      text: "Önerilen karar, maliyet avantajı, stok dağılımı ve aday karşılaştırmaları sade bir analiz özetinde toplanır. Böylece satın alma ve üretim aynı veriye bakar.",
+      image: "assets/product/advisor-summary.png",
+      alt: "OptiLine Pro stok danışmanı analiz özeti"
+    },
+    {
+      eyebrow: "Üretime hazır rapor",
+      title: "Hesap ekranda kalmaz, sahaya düzenli bir plan olarak iner.",
+      text: "Kesim sırası, stok boyu, üretilecek adet ve fire bilgisi okunaklı PDF planlarına dönüşür. Aynı çıktı arşiv, kontrol ve üretim ekibi için kullanılabilir.",
+      image: "assets/product/pdf-report.png",
+      alt: "OptiLine Pro PDF kesim planı"
+    }
+  ];
+  return `<section class="product-intro">
+      <div><span class="badge">OptiLine Pro ${safeText(publicRelease.version || "1.1.2")}</span><h1>Kesim planlamasının gerçek çalışma merkezi.</h1><p class="lead">OptiLine Pro yalnızca sonuç üreten bir hesap makinesi değildir. Veriyi toplar, seçenekleri karşılaştırır, üretim planını görünür hale getirir ve kararı sahaya aktarır.</p><div class="actions"><button class="button primary" data-go="request-license" type="button">Lisans talep et</button><button class="button ghost" data-go="downloads" type="button">Son sürümü incele</button></div></div>
+      <figure class="product-cover"><img src="assets/product/overview.png" alt="OptiLine Pro masaüstü programı genel görünümü"><figcaption>Programın gerçek masaüstü arayüzü</figcaption></figure>
+    </section>
+    <div class="product-story-list">${stories.slice(1).map((story, index) => `<section class="product-story ${index % 2 ? "reverse" : ""}"><div class="product-story-copy"><span>${story.eyebrow}</span><h2>${story.title}</h2><p>${story.text}</p></div><figure><img src="${story.image}" alt="${story.alt}" loading="lazy"></figure></section>`).join("")}</div>
+    <section class="product-cta"><div><span class="badge good">İhtiyacınıza göre lisans</span><h2>Yalnızca kullanacağınız modülleri açın.</h2><p>Modül, cihaz sayısı ve kullanım süresi talebinizi gönderin. Yönetici talebi değerlendirip size özel lisansı hazırlasın.</p></div><button class="button primary" data-go="request-license" type="button">Lisans isteği oluştur</button></section>`;
 }
 
 function pricingView() {
@@ -141,15 +201,43 @@ function loginView() {
 }
 
 function licenseRequestView() {
-  return `${sectionHead("Lisans isteği", "Talebiniz doğrudan merkezi lisans sistemine kaydedilir.")}
-    <form class="form-panel form-grid" id="uiLicenseRequestForm">
-      <label>Ad / firma<input id="requestCustomerName" required autocomplete="organization"></label>
-      <label>İletişim bilgisi<input id="requestContact" required placeholder="E-posta veya telefon"></label>
-      <label style="grid-column:1/-1">Makine kodu<input id="requestMachineCode" required placeholder="Programda görünen makine kodu" autocomplete="off"></label>
-      <fieldset style="grid-column:1/-1"><legend>İstenen modüller</legend><div class="check-grid">${["Proje", "Profil", "Stok Danışmanı", "Levha"].map(module => `<label><input type="checkbox" name="requestModule" value="${module}"> ${module}</label>`).join("")}</div></fieldset>
-      <label style="grid-column:1/-1">Not<textarea id="requestNote" placeholder="İhtiyacınızı kısaca yazabilirsiniz"></textarea></label>
-      <button class="button primary" type="submit">Lisans isteğini gönder</button>
-    </form>`;
+  if (uiLicenseRequestSuccess) {
+    return `<section class="request-success"><span class="request-success-icon">✓</span><span class="badge good">Talep alındı</span><h1>Lisans isteğiniz yönetime ulaştı.</h1><p>Talebiniz merkezi sisteme kaydedildi. Yönetici modülleri, cihaz sayısını ve kullanım süresini inceleyerek lisansınızı hazırlayacak.</p><div class="request-number"><small>TALEP NUMARASI</small><strong>${safeText(uiLicenseRequestSuccess.id)}</strong><span>${safeText(uiLicenseRequestSuccess.status)}</span></div><div class="actions"><button class="button primary" data-request-new type="button">Yeni talep oluştur</button><button class="button ghost" data-go="home" type="button">Ana sayfaya dön</button></div></section>`;
+  }
+  const modules = [
+    ["Proje", "Toplu üretim ve proje akışı"],
+    ["Profil", "1D profil kesim optimizasyonu"],
+    ["Stok Danışmanı", "Boy ve maliyet karşılaştırması"],
+    ["Levha", "2D levha yerleşim optimizasyonu"]
+  ];
+  return `${sectionHead("Lisans talebi oluşturun", "İhtiyacınızı iletin; nihai modül, süre ve cihaz tanımı yönetici onayından sonra hazırlanır.")}
+    <div class="request-layout">
+      <form class="request-form" id="uiLicenseRequestForm">
+        <div class="request-form-head"><span class="number">01</span><div><h3>Firma ve yetkili bilgileri</h3><p>Talebiniz hakkında size ulaşabilmemiz için gerekli bilgiler.</p></div></div>
+        <div class="form-grid">
+          <label>Yetkili adı<input id="requestCustomerName" required maxlength="120" autocomplete="name" placeholder="Ad soyad"></label>
+          <label>Firma adı<input id="requestCompany" maxlength="160" autocomplete="organization" placeholder="Firma / işletme"></label>
+          <label>E-posta<input id="requestEmail" type="email" required maxlength="180" autocomplete="email" placeholder="ornek@firma.com"></label>
+          <label>Telefon<input id="requestPhone" maxlength="40" autocomplete="tel" placeholder="+90 ..."></label>
+        </div>
+        <div class="request-form-head"><span class="number">02</span><div><h3>Program ve lisans ihtiyacı</h3><p>Makine kodunu programın lisans ekranından kopyalayabilirsiniz.</p></div></div>
+        <div class="form-grid">
+          <label style="grid-column:1/-1">Makine kodu<input id="requestMachineCode" required maxlength="160" placeholder="Örn: C6B0CC47432E03CC" autocomplete="off"></label>
+          <label>Talep edilen süre<select id="requestDuration"><option value="0">Yönetici belirlesin</option><option value="1">1 ay</option><option value="3">3 ay</option><option value="6">6 ay</option><option value="12">12 ay</option><option value="24">24 ay</option></select></label>
+          <label>Cihaz sayısı<input id="requestDevices" type="number" min="1" max="20" value="1"></label>
+        </div>
+        <fieldset class="request-modules"><legend>İstenen modüller</legend>${modules.map(([module, text]) => `<label><input type="checkbox" name="requestModule" value="${module}"><span><strong>${module}</strong><small>${text}</small></span></label>`).join("")}</fieldset>
+        <label>Talep notu<textarea id="requestNote" maxlength="2000" placeholder="Kullanım ihtiyacınızı, firma yapınızı veya özel talebinizi kısaca yazabilirsiniz."></textarea></label>
+        <label class="request-consent"><input id="requestConsent" type="checkbox" required><span>Bu bilgilerin lisans talebimin değerlendirilmesi için kullanılmasını kabul ediyorum.</span></label>
+        <label class="request-honeypot" aria-hidden="true">Web sitesi<input id="requestWebsite" tabindex="-1" autocomplete="off"></label>
+        <button class="button primary request-submit" type="submit">Talebi yönetime gönder</button>
+      </form>
+      <aside class="request-aside">
+        <span class="badge">Nasıl ilerler?</span><h2>Talebiniz doğrudan lisans merkezine düşer.</h2>
+        <ol><li><strong>Talep kaydı</strong><span>Bilgileriniz merkezi sisteme güvenli şekilde kaydedilir.</span></li><li><strong>Yönetici incelemesi</strong><span>İstenen modüller, süre ve cihaz sayısı kontrol edilir.</span></li><li><strong>Size özel karar</strong><span>Yönetici talebi onaylayabilir, reddedebilir veya farklı koşullarla lisanslayabilir.</span></li><li><strong>Aktivasyon</strong><span>Onaylanan lisans anahtarı programdaki makine koduyla kullanılır.</span></li></ol>
+        <div class="request-aside-note"><strong>Ücretsiz kullanım devam eder</strong><p>Lisansınız hazırlanırken programın lisanssız kullanım sınırlarıyla çalışmaya devam edebilirsiniz.</p></div>
+      </aside>
+    </div>`;
 }
 
 function customerDashboardView() {
@@ -275,10 +363,63 @@ function customerTicketsView() {
 
 function adminDashboardView() {
   const rows = getLicenses();
+  const requests = (portalState.requests || []).filter(item => ["Yeni", "İnceleniyor"].includes(item.status));
   const release = getRelease();
   const releaseReady = releaseUrlReady(release.setup_url) && releaseUrlReady(release.update_url);
-  return `${sectionHead("Yönetim paneli", "OptiLine sisteminin genel durumu.", `<div class="actions"><button class="button primary" data-go="licenses" type="button">Lisans merkezini aç</button><button class="button ghost" data-admin-logout type="button">Çıkış yap</button></div>`)}
-    <div class="grid-2"><article class="card"><h3>Son lisans işlemleri</h3>${rows.slice(0, 3).map(row => `<p>${safeText(row.label)} <span class="badge ${licenseBadgeClass(row.status)}">${safeText(row.status)}</span></p>`).join("") || `<p class="muted">Henüz lisans yok.</p>`}</article><article class="card"><h3>Sistem durumu</h3><p>Lisans kayıtları <span class="badge good">Cloudflare D1 merkezi</span></p><p>Güncelleme paketleri <span class="badge ${releaseReady ? "good" : "warn"}">${releaseReady ? "Bağlı" : "Bağlantı bekliyor"}</span></p><p>API <span class="badge good">Çevrimiçi</span></p></article></div>`;
+  return `${sectionHead("Yönetim paneli", "OptiLine sisteminin genel durumu.", `<div class="actions"><button class="button primary" data-go="license-requests" type="button">Lisans taleplerini aç</button><button class="button ghost" data-admin-logout type="button">Çıkış yap</button></div>`)}
+    <div class="grid-3"><article class="card admin-request-summary"><div class="section-head"><div><h3>Bekleyen lisans talepleri</h3><p>İnceleme veya karar bekleyen kayıtlar.</p></div><span class="badge ${requests.length ? "warn" : "good"}">${requests.length}</span></div>${requests.slice(0, 3).map(row => `<button type="button" data-request-select="${safeText(row.id)}" data-go="license-requests"><strong>${safeText(row.company || row.customer_name)}</strong><span>${safeText(row.status)} · ${safeText((row.modules || []).join(", "))}</span></button>`).join("") || `<p class="muted">Bekleyen talep yok.</p>`}</article><article class="card"><h3>Son lisans işlemleri</h3>${rows.slice(0, 3).map(row => `<p>${safeText(row.label)} <span class="badge ${licenseBadgeClass(row.status)}">${safeText(row.status)}</span></p>`).join("") || `<p class="muted">Henüz lisans yok.</p>`}</article><article class="card"><h3>Sistem durumu</h3><p>Lisans kayıtları <span class="badge good">Cloudflare D1 merkezi</span></p><p>Güncelleme paketleri <span class="badge ${releaseReady ? "good" : "warn"}">${releaseReady ? "Bağlı" : "Bağlantı bekliyor"}</span></p><p>API <span class="badge good">Çevrimiçi</span></p></article></div>`;
+}
+
+function requestStatusClass(status) {
+  if (status === "Onaylandı") return "good";
+  if (status === "Reddedildi") return "danger";
+  return "warn";
+}
+
+function requestDefaultExpiry(request) {
+  const months = Number(request?.requested_duration_months || 0);
+  if (!months) return "";
+  const value = new Date();
+  value.setMonth(value.getMonth() + months);
+  return value.toISOString().slice(0, 10);
+}
+
+function filteredLicenseRequests() {
+  const requests = portalState.requests || [];
+  return uiRequestFilter === "all" ? requests : requests.filter(item => item.status === uiRequestFilter);
+}
+
+function licenseRequestsView() {
+  const allRequests = portalState.requests || [];
+  const rows = filteredLicenseRequests();
+  if (!uiSelectedRequestId || !rows.some(item => item.id === uiSelectedRequestId)) {
+    uiSelectedRequestId = rows[0]?.id || "";
+  }
+  const selected = rows.find(item => item.id === uiSelectedRequestId);
+  const filters = [["all", "Tümü"], ["Yeni", "Yeni"], ["İnceleniyor", "İnceleniyor"], ["Onaylandı", "Onaylandı"], ["Reddedildi", "Reddedildi"]];
+  const list = rows.map(item => `<button class="request-list-item ${item.id === uiSelectedRequestId ? "active" : ""}" data-request-select="${safeText(item.id)}" type="button"><span><strong>${safeText(item.company || item.customer_name)}</strong><small>${safeText(item.customer_name)} · ${safeText(item.created_at)}</small></span><span class="badge ${requestStatusClass(item.status)}">${safeText(item.status)}</span><em>${safeText((item.modules || []).join(" · "))}</em></button>`).join("") || `<div class="license-empty"><strong>Bu durumda talep yok.</strong><span>Başka bir filtre seçebilirsiniz.</span></div>`;
+  const detail = selected ? licenseRequestDetailMarkup(selected) : `<article class="request-detail-empty"><strong>Henüz lisans talebi yok.</strong><span>Müşteriden gelen ilk talep burada görünecek.</span></article>`;
+  return `${sectionHead("Lisans talepleri", "Müşterinin istediği koşulları inceleyin; nihai lisansı kendi kararınıza göre hazırlayın.", `<span class="badge ${allRequests.some(item => ["Yeni", "İnceleniyor"].includes(item.status)) ? "warn" : "good"}">${allRequests.filter(item => ["Yeni", "İnceleniyor"].includes(item.status)).length} bekliyor</span>`)}
+    <div class="request-admin-toolbar">${filters.map(([value, label]) => `<button class="${uiRequestFilter === value ? "active" : ""}" data-request-filter="${value}" type="button">${label}<span>${value === "all" ? allRequests.length : allRequests.filter(item => item.status === value).length}</span></button>`).join("")}</div>
+    <div class="request-admin-layout"><section class="request-list-panel"><div class="request-list-head"><strong>Gelen talepler</strong><span>${rows.length} kayıt</span></div><div class="request-list">${list}</div></section><section class="request-detail-panel">${detail}</section></div>`;
+}
+
+function licenseRequestDetailMarkup(request) {
+  const approved = request.status === "Onaylandı";
+  const rejected = request.status === "Reddedildi";
+  const requestedDevices = Math.max(1, Number(request.requested_max_devices || 1));
+  const expiry = requestDefaultExpiry(request);
+  const moduleOptions = ["Proje", "Profil", "Stok Danışmanı", "Levha"];
+  return `<div class="request-detail-head"><div><span class="badge ${requestStatusClass(request.status)}">${safeText(request.status)}</span><h2>${safeText(request.company || request.customer_name)}</h2><p>${safeText(request.id)} · ${safeText(request.created_at)}</p></div>${request.license_id ? `<span class="badge good">Lisans oluşturuldu</span>` : ""}</div>
+    <div class="request-contact-grid"><div><small>YETKİLİ</small><strong>${safeText(request.customer_name)}</strong></div><div><small>E-POSTA</small><strong>${safeText(request.email || request.contact || "-")}</strong></div><div><small>TELEFON</small><strong>${safeText(request.phone || "-")}</strong></div><div><small>MAKİNE KODU</small><strong>${safeText(request.machine_code)}</strong></div></div>
+    <div class="request-original"><strong>Müşterinin talebi</strong><span>${safeText((request.modules || []).join(" · "))}</span><span>${request.requested_duration_months ? `${safeText(request.requested_duration_months)} ay` : "Süreyi yönetici belirlesin"} · ${requestedDevices} cihaz</span>${request.note ? `<p>${safeText(request.note)}</p>` : ""}</div>
+    ${approved || rejected ? `<div class="request-decision-final"><h3>${approved ? "Talep lisansa dönüştürüldü" : "Talep reddedildi"}</h3><p>${safeText(request.decision_note || "Karar notu eklenmedi.")}</p>${request.license_id ? `<button class="button ghost" data-go="licenses" type="button">Oluşan lisansı aç</button>` : ""}</div>` : `<form id="adminRequestDecisionForm" class="request-decision-form" data-request-id="${safeText(request.id)}">
+      <div class="request-form-head"><span class="number">✓</span><div><h3>Nihai lisansı hazırlayın</h3><p>Aşağıdaki alanlar müşterinin isteğinden bağımsız olarak değiştirilebilir.</p></div></div>
+      <div class="form-grid"><label>Lisans etiketi<input id="adminRequestLabel" required value="${safeText(request.company || request.customer_name)}"></label><label>Yetkili adı<input id="adminRequestCustomer" required value="${safeText(request.customer_name)}"></label><label>Firma<input id="adminRequestCompany" value="${safeText(request.company || "")}"></label><label>E-posta<input id="adminRequestEmail" type="email" value="${safeText(request.email || request.contact || "")}"></label><label>Telefon<input id="adminRequestPhone" value="${safeText(request.phone || "")}"></label><label>Makine kodu<input id="adminRequestMachine" value="${safeText(request.machine_code)}"></label><label>Maksimum cihaz<input id="adminRequestDevices" type="number" min="1" max="100" value="${requestedDevices}"></label><label>Bitiş tarihi<input id="adminRequestExpiry" type="date" value="${safeText(expiry)}"></label></div>
+      <fieldset class="request-modules"><legend>Tam erişim verilecek modüller</legend>${moduleOptions.map(module => `<label><input type="checkbox" name="adminRequestModule" value="${module}" ${(request.modules || []).includes(module) ? "checked" : ""}><span><strong>${module}</strong></span></label>`).join("")}</fieldset>
+      <label>Lisans notu<textarea id="adminRequestNote">${safeText(request.note || "")}</textarea></label><label>Karar notu<textarea id="adminRequestDecisionNote" placeholder="Müşteri talebiyle ilgili yönetim notu"></textarea></label>
+      <div class="request-decision-actions"><button class="button ghost" data-request-action="review" data-request-id="${safeText(request.id)}" type="button">İncelemeye al</button><button class="button danger" data-request-action="reject" data-request-id="${safeText(request.id)}" type="button">Talebi reddet</button><button class="button success" type="submit">Onayla ve lisans oluştur</button></div>
+    </form>`}`;
 }
 
 function customersView() {
@@ -348,6 +489,7 @@ function currentView() {
     tickets: customerTicketsView,
     profile: profileView,
     "admin-dashboard": adminDashboardView,
+    "license-requests": licenseRequestsView,
     licenses: () => licensesView(true),
     customers: customersView,
     "admin-devices": adminDevicesView,
@@ -398,6 +540,7 @@ document.querySelectorAll("[data-mode]").forEach(button => button.addEventListen
 uiScreen.addEventListener("click", event => {
   const go = event.target.closest("[data-go]");
   if (go) {
+    if (go.dataset.requestSelect) uiSelectedRequestId = go.dataset.requestSelect;
     uiCurrent = go.dataset.go;
     history.replaceState(null, "", `#${uiMode}/${uiCurrent}`);
     renderNav();
@@ -412,6 +555,35 @@ uiScreen.addEventListener("click", event => {
   const filterButton = event.target.closest("[data-license-filter]");
   if (filterButton) {
     uiLicenseFilter = filterButton.dataset.licenseFilter;
+    renderScreen();
+    return;
+  }
+  const requestFilterButton = event.target.closest("[data-request-filter]");
+  if (requestFilterButton) {
+    uiRequestFilter = requestFilterButton.dataset.requestFilter;
+    renderScreen();
+    return;
+  }
+  const requestSelectButton = event.target.closest("[data-request-select]");
+  if (requestSelectButton) {
+    uiSelectedRequestId = requestSelectButton.dataset.requestSelect;
+    renderScreen();
+    return;
+  }
+  const requestActionButton = event.target.closest("[data-request-action]");
+  if (requestActionButton) {
+    const action = requestActionButton.dataset.requestAction;
+    const requestId = requestActionButton.dataset.requestId;
+    const decisionNote = document.querySelector("#adminRequestDecisionNote")?.value.trim() || "";
+    if (action === "reject" && !window.confirm("Bu lisans talebi reddedilsin mi?")) return;
+    requestActionButton.disabled = true;
+    runLicenseRequestActionOnApi(requestId, action, { decision_note: decisionNote })
+      .then(() => { renderMetrics(); renderScreen(); showUiToast(action === "reject" ? "Lisans talebi reddedildi." : "Talep incelemeye alındı."); })
+      .catch(error => { requestActionButton.disabled = false; showUiToast(error.message); });
+    return;
+  }
+  if (event.target.closest("[data-request-new]")) {
+    uiLicenseRequestSuccess = null;
     renderScreen();
     return;
   }
@@ -528,14 +700,55 @@ uiScreen.addEventListener("submit", async event => {
     try {
       const result = await createLicenseRequestOnApi({
         customer_name: document.querySelector("#requestCustomerName").value.trim(),
-        contact: document.querySelector("#requestContact").value.trim(),
+        company: document.querySelector("#requestCompany").value.trim(),
+        email: document.querySelector("#requestEmail").value.trim(),
+        phone: document.querySelector("#requestPhone").value.trim(),
         machine_code: document.querySelector("#requestMachineCode").value.trim(),
+        requested_duration_months: Number(document.querySelector("#requestDuration").value || 0),
+        requested_max_devices: Number(document.querySelector("#requestDevices").value || 1),
         modules,
-        note: document.querySelector("#requestNote").value.trim()
+        note: document.querySelector("#requestNote").value.trim(),
+        website: document.querySelector("#requestWebsite").value.trim()
       });
       event.target.reset();
+      uiLicenseRequestSuccess = result.request;
+      renderScreen();
       showUiToast(`Lisans isteği gönderildi. İstek no: ${result.request.id}`);
     } catch (error) {
+      showUiToast(error.message);
+    }
+    return;
+  }
+  if (event.target.id === "adminRequestDecisionForm") {
+    const modules = [...event.target.querySelectorAll("input[name='adminRequestModule']:checked")].map(input => input.value);
+    if (!modules.length) {
+      showUiToast("Lisans için en az bir modül seçin.");
+      return;
+    }
+    const requestId = event.target.dataset.requestId;
+    const submitButton = event.target.querySelector("button[type='submit']");
+    submitButton.disabled = true;
+    try {
+      const result = await runLicenseRequestActionOnApi(requestId, "approve", {
+        label: document.querySelector("#adminRequestLabel").value.trim(),
+        customer_name: document.querySelector("#adminRequestCustomer").value.trim(),
+        company: document.querySelector("#adminRequestCompany").value.trim(),
+        email: document.querySelector("#adminRequestEmail").value.trim(),
+        phone: document.querySelector("#adminRequestPhone").value.trim(),
+        machine: document.querySelector("#adminRequestMachine").value.trim(),
+        max_devices: Number(document.querySelector("#adminRequestDevices").value || 1),
+        expires_at: document.querySelector("#adminRequestExpiry").value || null,
+        modules,
+        note: document.querySelector("#adminRequestNote").value.trim(),
+        decision_note: document.querySelector("#adminRequestDecisionNote").value.trim(),
+        version: getRelease().version
+      });
+      if (result.license?.key) await navigator.clipboard?.writeText(result.license.key);
+      renderMetrics();
+      renderScreen();
+      showUiToast("Talep onaylandı; lisans oluşturuldu ve anahtar kopyalandı.");
+    } catch (error) {
+      submitButton.disabled = false;
       showUiToast(error.message);
     }
     return;
