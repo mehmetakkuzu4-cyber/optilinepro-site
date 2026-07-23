@@ -3,68 +3,62 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Müşteri Paneli | OptiLine Pro</title>
-  <link rel="stylesheet" href="assets/styles.css">
-  <script src="assets/app.js" defer></script>
+  <meta name="robots" content="noindex,follow">
+  <link rel="canonical" href="https://optilinepro.com/customer">
+  <title>OptiLine Pro | Müşteri Merkezi</title>
+  <link rel="icon" href="assets/app-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/admin.css?v=20260721-6">
+  <link rel="stylesheet" href="assets/customer.css?v=20260723-1">
 </head>
-<body data-page="customer">
-  <div class="app-layout">
-    <aside class="side-nav">
-      <a class="brand" href="index.html"><img src="assets/logo.png" alt="OptiLine Pro"><span>OptiLine Pro</span></a>
-      <a class="active" href="customer.html">Lisans Durumu</a>
-      <a href="download.html">Setup Merkezi</a>
-      <a href="license.html">Lisans Akışı</a>
-      <a href="index.html">Siteye Dön</a>
-      <button class="btn full" data-logout type="button" style="margin-top:18px">Çıkış</button>
+<body>
+<section class="customer-screen" data-customer-screen>
+  <header class="customer-header">
+    <div class="customer-brand"><img src="assets/logo.png" alt=""><span><strong>OptiLine Pro</strong>Müşteri Merkezi</span></div>
+    <div class="customer-license-status" data-customer-account-status><i></i><span><b>Lisans aktif</b>Son kontrol: şimdi</span></div>
+    <div class="customer-header-actions">
+      <button type="button" data-customer-home><i data-lucide="globe-2"></i>Web sitesi</button>
+      <button type="button" data-customer-download><i data-lucide="download"></i>Dosyalar</button>
+      <button class="customer-user" type="button" title="Müşteri hesabı"><span data-customer-initials>OD</span><b data-customer-name>OptiLine Demo</b></button>
+    </div>
+  </header>
+
+  <div class="customer-layout">
+    <aside class="customer-sidebar">
+      <p>Hesabım</p>
+      <nav aria-label="Müşteri sayfaları">
+        <button class="is-active" type="button" data-customer-section="overview"><i data-lucide="layout-dashboard"></i>Genel bakış</button>
+        <button type="button" data-customer-section="licenses"><i data-lucide="key-round"></i>Lisanslarım</button>
+        <button type="button" data-customer-section="requests"><i data-lucide="clipboard-list"></i>Taleplerim<span data-customer-request-count>0</span></button>
+        <button type="button" data-customer-section="devices"><i data-lucide="monitor-smartphone"></i>Cihazlarım</button>
+        <button type="button" data-customer-section="downloads"><i data-lucide="package-check"></i>Dosyalar</button>
+        <button type="button" data-customer-section="tickets"><i data-lucide="life-buoy"></i>Destek talepleri<span data-customer-ticket-count>0</span></button>
+        <button type="button" data-customer-section="profile"><i data-lucide="user-round"></i>Hesabım</button>
+      </nav>
+      <button class="customer-request-license" type="button" data-customer-license-request><i data-lucide="plus"></i>Yeni lisans talebi</button>
+      <button class="customer-logout" type="button" data-customer-logout><i data-lucide="log-out"></i>Çıkış yap</button>
     </aside>
-    <main class="workspace">
-      <section class="workspace-head">
-        <div>
-          <h1>Müşteri Paneli</h1>
-          <p><strong data-user-name></strong> · <span data-user-company></span></p>
-        </div>
-        <span class="pill amber">Lisans isteği bekleyebilir</span>
-      </section>
 
-      <section class="stat-row">
-        <div class="stat"><span>Aktif modül</span><b>2</b></div>
-        <div class="stat"><span>Cihaz hakkı</span><b>1</b></div>
-        <div class="stat"><span>Son sürüm</span><b>1.1.2</b></div>
-        <div class="stat"><span>Durum</span><b>Demo</b></div>
-      </section>
+    <main class="customer-main">
+      <div class="customer-page-head">
+        <div><p>Müşteri hesabı</p><h1 data-customer-page-title>Genel bakış</h1><span data-customer-page-description>Lisansınızı, cihazlarınızı ve güncel kurulum paketini yönetin.</span></div>
+        <button type="button" data-customer-refresh><i data-lucide="refresh-cw"></i>Bilgileri yenile</button>
+      </div>
 
-      <section class="grid-2">
-        <div class="card">
-          <h2>Lisans İsteği Gönder</h2>
-          <p class="hint">Programdan aldığınız makine kodunu girin. Admin paneline istek olarak düşer.</p>
-          <form class="form" id="requestForm" style="margin-top:16px">
-            <div class="field">
-              <label for="machineCode">Makine kodu</label>
-              <input id="machineCode" placeholder="Örn: MCH-8A92-44F0" required>
-            </div>
-            <div class="field">
-              <label>İstenen modüller</label>
-              <div class="checkbox-stack">
-                <label><span>Proje Optimizasyonu</span><input name="modules" value="Proje" type="checkbox"></label>
-                <label><span>Profil Optimizasyonu</span><input name="modules" value="Profil" type="checkbox" checked></label>
-                <label><span>Stok Danışmanı</span><input name="modules" value="Stok Danismani" type="checkbox" checked></label>
-                <label><span>Levha Optimizasyonu</span><input name="modules" value="Levha" type="checkbox"></label>
-              </div>
-            </div>
-            <button class="btn primary" type="submit">Lisans İsteği Gönder</button>
-          </form>
-        </div>
-        <div class="card">
-          <h2>Aktif Paket</h2>
-          <div class="feature-list">
-            <div class="feature-item"><i class="checkmark"></i><div><strong>Profil Optimizasyonu</strong><span>50 parça demo limiti.</span></div></div>
-            <div class="feature-item"><i class="checkmark"></i><div><strong>Stok Danışmanı</strong><span>200 parça demo limiti.</span></div></div>
-            <div class="feature-item"><i class="checkmark"></i><div><strong>Launcher</strong><span>Güncel sürümü kontrol edecek yapı.</span></div></div>
-          </div>
-          <div class="notice blue" style="margin-top:16px">Gerçek yayında bu panel lisans API'sinden canlı durumu okuyacak.</div>
-        </div>
+      <div class="customer-overview" data-customer-overview><div data-customer-overview-content></div></div>
+
+      <section class="customer-module-view" data-customer-module-view hidden>
+        <div data-customer-module-content></div>
       </section>
     </main>
   </div>
+</section>
+<div class="prototype-toast" data-toast role="status" aria-live="polite"></div>
+<script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+<script src="assets/visitor.js?v=20260722-2"></script>
+<script src="assets/api.js?v=20260723-1"></script>
+  <script src="assets/customer.js?v=20260723-1"></script>
 </body>
 </html>
